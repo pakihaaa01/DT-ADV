@@ -34,7 +34,7 @@ class UserSeeder extends Seeder
                 'phone' => '083456789012',
                 'created_at' => now(),
                 'updated_at' => now(),
-            ]
+            ],
         ]);
     }
 }

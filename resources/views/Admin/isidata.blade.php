@@ -2,10 +2,15 @@
 <html lang="id">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    {{-- Judul halaman --}}
     <title>Form Pemesanan - Adventure</title>
-    <link rel="stylesheet" href="{{ asset('style.css') }}">
+
+    {{-- File CSS utama --}}
+    <link rel="stylesheet" href="{{ asset('style.css') }}" />
+
+    {{-- Styling lokal khusus form (bisa dipindah ke style.css jika ingin) --}}
     <style>
         .form-container {
             width: 90%;
@@ -24,7 +29,7 @@
 
         .form-title {
             font-size: 1.8rem;
-            color: #FFD700;
+            color: #ffffff;
             margin-bottom: 5px;
         }
 
@@ -90,6 +95,8 @@
 </head>
 
 <body>
+
+    {{-- Tombol kembali ke keranjang (fallback ke route jika session previous_url tidak ada) --}}
     <a href="{{ session('previous_url', route('admin.keranjang')) }}" class="back-btn">
         <span class="arrow">←</span> Kembali Ke Keranjang
     </a>
@@ -100,37 +107,121 @@
             <p class="form-subtitle">Lengkapi data dirimu untuk memudahkan proses pemesanan</p>
         </div>
 
-        <!-- Tambahkan action dan method -->
-        <form action="{{ route('admin.checkout') }}" method="POST">
+        {{-- Menampilkan error validasi (jika ada) --}}
+        @if ($errors->any())
+            <div class="errors" style="background:#ff4d4d; padding:10px; border-radius:8px; margin-bottom:15px;">
+                <ul>
+                    @foreach ($errors->all() as $err)
+                        <li>{{ $err }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        {{-- Flash error / success --}}
+        @if (session('error'))
+            <div class="error" style="background:#ff6b6b; padding:10px; border-radius:8px; margin-bottom:15px;">
+                {{ session('error') }}
+            </div>
+        @endif
+
+        @if (session('success'))
+            <div class="success" style="background:#00b894; padding:10px; border-radius:8px; margin-bottom:15px;">
+                {{ session('success') }}
+            </div>
+        @endif
+
+        {{-- FORM: kirim data pemesanan ke route checkout --}}
+        <form action="{{ route('admin.checkout.store') }}" method="POST">
             @csrf
+
+            {{-- Nama lengkap --}}
             <div class="form-group">
                 <label for="nama" class="label">Nama Lengkap</label>
                 <input type="text" id="nama" name="nama" class="input-field"
                     placeholder="Masukkan nama lengkap Anda" required>
             </div>
 
+            {{-- Nomor WhatsApp --}}
             <div class="form-group">
                 <label for="whatsapp" class="label">Nomor WhatsApp</label>
                 <input type="tel" id="whatsapp" name="whatsapp" class="input-field"
                     placeholder="Masukkan nomor WhatsApp Anda" required>
             </div>
 
+            {{-- Email --}}
             <div class="form-group">
                 <label for="email" class="label">Email</label>
                 <input type="email" id="email" name="email" class="input-field"
                     placeholder="Masukkan email Anda" required>
             </div>
 
+            {{-- Lama peminjaman (hari) --}}
             <div class="form-group">
-                <label for="hari" class="label">Berapa hari peminjaman? (Booking +7 hari sebelum kegiatan)</label>
+                <label for="hari" class="label">Berapa hari peminjaman?</label>
                 <input type="number" id="hari" name="hari" class="input-field"
                     placeholder="Masukkan jumlah hari" min="1" required>
             </div>
 
-            <!-- Tombol Submit -->
-            <button type="submit" class="submit-btn">KIRIM</button>
+            {{-- Tanggal mulai --}}
+            <div class="form-group">
+                <label for="tanggal_mulai" class="label">Tanggal Mulai Sewa</label>
+                <input type="date" id="tanggal_mulai" name="tanggal_mulai" class="input-field" required>
+            </div>
+
+            {{-- Tanggal kembali dihitung otomatis (readonly) --}}
+            <div class="form-group">
+                <label for="tanggal_kembali" class="label">Tanggal Kembali (otomatis)</label>
+                <input type="date" id="tanggal_kembali" name="tanggal_kembali" class="input-field" readonly>
+            </div>
+
+            <button type="submit" class="submit-btn">Submit</button>
         </form>
+
+        {{-- JavaScript kecil untuk menghitung tanggal kembali --}}
+        <script>
+            (function() {
+                // Ambil elemen hanya kalau ada di DOM — menghindari error jika script dipakai pada layout lain
+                const hariEl = document.getElementById('hari');
+                const startEl = document.getElementById('tanggal_mulai');
+                const outEl = document.getElementById('tanggal_kembali');
+
+                if (!hariEl || !startEl || !outEl) return;
+
+                // hitung tanggal kembali = tanggal_mulai + hari
+                function computeReturnDate() {
+                    const hari = parseInt(hariEl.value || 0, 10);
+                    const startVal = startEl.value;
+
+                    if (!startVal || !hari || hari < 1) {
+                        outEl.value = '';
+                        return;
+                    }
+
+                    // Buat objek Date dari string yyyy-mm-dd (gunakan T00:00:00 agar konsisten)
+                    const startDate = new Date(startVal + 'T00:00:00');
+
+                    // Tambah jumlah hari (mis. hari=1 berarti kembali keesokan hari)
+                    startDate.setDate(startDate.getDate() + hari);
+
+                    // Format ke yyyy-mm-dd untuk input[type=date]
+                    const year = startDate.getFullYear();
+                    const month = String(startDate.getMonth() + 1).padStart(2, '0');
+                    const day = String(startDate.getDate()).padStart(2, '0');
+                    outEl.value = `${year}-${month}-${day}`;
+                }
+
+                // Pasang event listener
+                hariEl.addEventListener('input', computeReturnDate);
+                startEl.addEventListener('change', computeReturnDate);
+
+                // Inisialisasi kemungkinan nilai default
+                computeReturnDate();
+            })();
+        </script>
+
     </div>
+
 </body>
 
 </html>

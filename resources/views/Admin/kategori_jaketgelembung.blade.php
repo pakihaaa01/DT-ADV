@@ -4,35 +4,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    {{-- Judul halaman --}}
     <title>DT Adventure</title>
+
+    {{-- File CSS utama --}}
     <link rel="stylesheet" href="{{ asset('style.css') }}">
 </head>
 
 <body>
 
+    {{-- HEADER: logo & navigasi --}}
     <header>
         <div class="header-container">
+
+            {{-- Logo utama --}}
             <div class="logo-container">
                 <img src="{{ asset('logo.png') }}" alt="DT Adventure Logo" class="logo">
             </div>
+
+            {{-- Menu navigasi --}}
             <nav>
-                <a href="{{ route('admin.hubungin') }}">BERANDA</a>
+                <a href="{{ route('User.dashboard') }}">BERANDA</a>
                 <a href="{{ route('admin.pricelist') }}">PRICELIST</a>
                 <a href="{{ route('admin.carasewa') }}">CARA SEWA</a>
                 <a href="{{ route('admin.hubungi') }}">HUBUNGI KAMI</a>
-                <a href="{{ route('admin.login') }}">LOGIN</a>
+                <a href="{{ route('adminn.login') }}">ADMIN</a>
             </nav>
+
         </div>
     </header>
 
-
-
+    {{-- SECTION: daftar produk kategori --}}
     <section class="produk-container">
+
+        {{-- Header kategori + ikon keranjang --}}
         <div class="produk-header">
             <div>
                 <h2>Jaket Gelembung</h2>
                 <p>Nyaman dipakai, cocok untuk cuaca ekstrem di gunung.</p>
             </div>
+
+            {{-- Ikon keranjang + jumlah item --}}
             <a href="{{ route('admin.keranjang') }}" class="cart-icon-link">
                 🛒
                 @php
@@ -44,22 +57,37 @@
             </a>
         </div>
 
-        </div>
+        {{-- Notifikasi sukses jika item ditambahkan --}}
         @if (session('success'))
             <div class="alert alert-success">
                 {{ session('success') }}
             </div>
         @endif
 
-
+        {{-- GRID: daftar produk dalam kategori --}}
         <div class="produk-grid">
+
+            {{-- Loop item --}}
             @forelse($items as $item)
                 <div class="produk-card">
+
+                    {{-- Gambar produk --}}
                     <img src="{{ asset('storage/' . $item->gambar) }}" alt="{{ $item->nama_alat }}" width="100">
+
                     <div class="produk-info">
+
+                        {{-- Nama item --}}
                         <h3>{{ $item->nama_alat }}</h3>
+
+                        {{-- Deskripsi item --}}
                         <p>{{ $item->deskripsi }}</p>
-                        <div class="harga">Rp {{ number_format($item->harga_sewa, 0, ',', '.') }} / hari</div>
+
+                        {{-- Harga sewa --}}
+                        <div class="harga">
+                            Rp {{ number_format($item->harga_sewa, 0, ',', '.') }} / hari
+                        </div>
+
+                        {{-- Tombol tambah ke keranjang --}}
                         <form action="{{ route('tambah.keranjang', $item->id) }}" method="POST">
                             @csrf
                             <button type="submit" class="tambah-btn">Tambah</button>
@@ -67,12 +95,13 @@
 
                     </div>
                 </div>
+
+                {{-- Jika tidak ada item --}}
             @empty
                 <p class="text-center">Belum ada alat pada kategori ini.</p>
             @endforelse
+
         </div>
-
-
 
     </section>
 

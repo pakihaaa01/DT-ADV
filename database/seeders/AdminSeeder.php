@@ -8,18 +8,16 @@ use Illuminate\Support\Facades\Hash;
 
 class AdminSeeder extends Seeder
 {
-    /**
-     * Jalankan seeder untuk data admin.
-     */
     public function run(): void
     {
-        DB::table('admins')->insert([
-            'name' => 'Admin DT Adventure',
-            'email' => 'dt_adventure@gmail.com',
-            'password' => Hash::make('admin123'),
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-
+        DB::table('admins')->updateOrInsert(
+            ['email' => 'dt_adventure@gmail.com'],  // pastikan 1 admin unik
+            [
+                'name' => 'Admin DT Adventure',
+                'password' => Hash::make('admin123'),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]
+        );
     }
 }

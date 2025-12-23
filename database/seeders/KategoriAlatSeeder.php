@@ -29,7 +29,7 @@ class KategoriAlatSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
-                'nama_kategori' => 'Kebutuhan Tracking-Hydropaypack',
+                'nama_kategori' => 'Kebutuhan Tracking-Hydropack',
                 'deskripsi' => 'Praktis dibawa, air minum selalu siap sepanjang perjalanan',
                 'created_at' => now(),
                 'updated_at' => now(),

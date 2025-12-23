@@ -12,7 +12,7 @@ class PembayaranSeeder extends Seeder
         DB::table('pembayaran')->insert([
             [
                 'user_id' => 1, // Budi Santoso
-                'kode_pembayaran' => 'PAY' . now()->format('YmdHis') . '01',
+                'kode_pembayaran' => 'PAY'.now()->format('YmdHis').'01',
                 'jumlah' => 150000.00,
                 'metode_pembayaran' => 'Transfer Bank',
                 'status' => 'lunas',
@@ -21,8 +21,8 @@ class PembayaranSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
-                'user_id' =>2, // Sinta Dewi
-                'kode_pembayaran' => 'PAY' . now()->format('YmdHis') . '02',
+                'user_id' => 2, // Sinta Dewi
+                'kode_pembayaran' => 'PAY'.now()->format('YmdHis').'02',
                 'jumlah' => 200000.00,
                 'metode_pembayaran' => 'Transfer Bank',
                 'status' => 'pending',
@@ -32,7 +32,7 @@ class PembayaranSeeder extends Seeder
             ],
             [
                 'user_id' => 3, // Rizky Pratama
-                'kode_pembayaran' => 'PAY' . now()->format('YmdHis') . '03',
+                'kode_pembayaran' => 'PAY'.now()->format('YmdHis').'03',
                 'jumlah' => 100000.00,
                 'metode_pembayaran' => 'COD',
                 'status' => 'gagal',

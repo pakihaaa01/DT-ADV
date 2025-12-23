@@ -9,21 +9,26 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up()
+    public function up(): void
     {
-        Schema::table('keranjang', function (Blueprint $table) {
-            $table->string('gambar')->after('nama_alat');
-        });
+        // Tambah kolom hanya jika belum ada
+        if (! Schema::hasColumn('keranjang', 'gambar')) {
+            Schema::table('keranjang', function (Blueprint $table) {
+                $table->string('gambar')->after('nama_alat');
+            });
+        }
     }
-
 
     /**
      * Reverse the migrations.
      */
     public function down(): void
     {
-        Schema::table('keranjang', function (Blueprint $table) {
-            //
-        });
+        // Hapus kolom hanya jika ada
+        if (Schema::hasColumn('keranjang', 'gambar')) {
+            Schema::table('keranjang', function (Blueprint $table) {
+                $table->dropColumn('gambar');
+            });
+        }
     }
 };

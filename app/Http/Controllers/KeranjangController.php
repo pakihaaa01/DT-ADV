@@ -6,95 +6,133 @@ use Illuminate\Http\Request;
 use App\Models\TipeAlat;
 use App\Models\Keranjang;
 
+/**
+ * Controller untuk mengelola keranjang belanja (cart)
+ * Berbasis session (guest maupun user login)
+ */
 class KeranjangController extends Controller
 {
-    // Menampilkan halaman keranjang (admin)
-    public function index()
+    /**
+     * Menampilkan halaman keranjang
+     * Mengambil semua item keranjang berdasarkan session ID
+     */
+    public function index(Request $request)
     {
-        // Ambil semua data dari tabel keranjang
-        $cart = Keranjang::all();
+        // Ambil ID session saat ini
+        $sessionId = $request->session()->getId();
 
-        return view('Admin.keranjang', compact('cart'));
+        // Ambil semua item keranjang milik session ini
+        $cart = Keranjang::where('session_id', $sessionId)->get();
+
+        // Hitung total harga (harga x jumlah)
+        $total = $cart->sum(fn($i) => $i->harga * $i->jumlah);
+
+        // Tampilkan view keranjang
+        return view('Admin.keranjang', compact('cart', 'total'));
     }
 
-    public function checkout()
+    /**
+     * Menambahkan alat ke dalam keranjang
+     * Jika alat sudah ada di keranjang → jumlah ditambah
+     * Jika belum → buat record baru
+     */
+    public function tambah(Request $request, $id)
     {
-        // Ambil semua item keranjang dari database
-        $cart = \App\Models\Keranjang::all();
+        // Ambil session ID
+        $sessionId = $request->session()->getId();
 
-        // Hitung total harga
-        $total = $cart->sum(function ($item) {
-            return $item->harga * $item->jumlah;
-        });
-
-        // Kirim ke view
-        return view('Admin.checkout', compact('cart', 'total'));
-    }
-
-
-    // Halaman nota / checkout user
-    public function nota()
-    {
-        $cart = session()->get('cart', []);
-        $total = collect($cart)->sum(fn($item) => $item['harga_sewa'] * $item['jumlah']);
-
-        return view('User.nota', compact('cart', 'total'));
-    }
-
-    // Tambahkan ke keranjang (disimpan ke DATABASE -> tabel keranjang)
-    public function tambah($id)
-    {
+        // Ambil data alat berdasarkan ID (404 jika tidak ada)
         $item = TipeAlat::findOrFail($id);
 
-        Keranjang::create([
-            'tipe_alat_id' => $item->id,
-            'nama_alat'    => $item->nama_alat,
-            'gambar'       => $item->gambar,
-            'harga'       => $item->harga_sewa, // jangan NULL
-            'jumlah'      => 1,
-        ]);
+        // Cek apakah alat ini sudah ada di keranjang session ini
+        $existing = Keranjang::where('session_id', $sessionId)
+            ->where('tipe_alat_id', $item->id)
+            ->first();
 
+        if ($existing) {
+            // Jika sudah ada → tambah jumlah 1
+            $existing->increment('jumlah', 1);
+        } else {
+            // Jika belum ada → buat item keranjang baru
+            Keranjang::create([
+                'session_id'   => $sessionId,
+                'tipe_alat_id' => $item->id,
+                'nama_alat'    => $item->nama_alat,
+                'gambar'       => $item->gambar,
+                'harga'        => $item->harga_sewa,
+                'jumlah'       => 1,
+            ]);
+        }
+
+        // Kembali ke halaman sebelumnya dengan pesan sukses
         return back()->with('success', "{$item->nama_alat} berhasil ditambahkan ke keranjang!");
     }
 
-    public function hapus($id)
+    /**
+     * Menghapus satu item dari keranjang
+     * Dibatasi hanya untuk session pemilik item
+     */
+    public function hapus(Request $request, $id)
     {
-        // Hapus data
-        $item = Keranjang::find($id);
-        if ($item) {
-            $item->delete();
+        // Ambil session ID
+        $sessionId = $request->session()->getId();
+
+        // Ambil item keranjang (404 jika tidak ada)
+        $item = Keranjang::findOrFail($id);
+
+        // Cegah user menghapus item milik session lain
+        if ($item->session_id !== $sessionId) {
+            abort(403, 'Aksi tidak diperbolehkan.');
         }
 
-        // Simpan URL sebelumnya kalau bukan login atau keranjang
-        $prev = url()->previous();
-        if (!str_contains($prev, 'login') && !str_contains($prev, 'keranjang')) {
-            session(['previous_url' => $prev]);
-        }
+        // Hapus item dari keranjang
+        $item->delete();
 
-        // Redirect ke halaman keranjang
-        return redirect()->route('admin.keranjang')->with('success', 'Item berhasil dihapus!');
+        // Redirect ke halaman keranjang (bukan back)
+        return redirect()->route('admin.keranjang')
+            ->with('success', 'Item berhasil dihapus!');
     }
 
-
-
-    // Tambah ke keranjang menggunakan SESSION (bukan database)
-    public function addToCart($id)
+    /**
+     * Mengubah jumlah item di keranjang
+     * Minimal jumlah adalah 1
+     */
+    public function updateJumlah(Request $request, $id)
     {
-        $alat = TipeAlat::findOrFail($id);
+        // Validasi input jumlah
+        $request->validate([
+            'jumlah' => 'required|integer|min:1'
+        ]);
 
-        $cart = session()->get('cart', []);
+        // Ambil session ID
+        $sessionId = $request->session()->getId();
 
-        if (isset($cart[$id])) {
-            $cart[$id]['jumlah']++;
-        } else {
-            $cart[$id] = [
-                'nama_alat'   => $alat->nama_alat,
-                'harga_sewa'  => $alat->harga_sewa,
-                'jumlah'      => 1
-            ];
+        // Ambil item keranjang
+        $item = Keranjang::findOrFail($id);
+
+        // Pastikan item milik session ini
+        if ($item->session_id !== $sessionId) {
+            abort(403);
         }
 
-        session()->put('cart', $cart);
-        return redirect()->back()->with('success', 'Berhasil ditambahkan ke keranjang!');
+        // Update jumlah item
+        $item->jumlah = $request->jumlah;
+        $item->save();
+
+        return back()->with('success', 'Jumlah item diperbarui.');
+    }
+
+    /**
+     * Mengosongkan seluruh keranjang milik session ini
+     */
+    public function clear(Request $request)
+    {
+        // Ambil session ID
+        $sessionId = $request->session()->getId();
+
+        // Hapus semua item keranjang berdasarkan session
+        Keranjang::where('session_id', $sessionId)->delete();
+
+        return back()->with('success', 'Keranjang dibersihkan.');
     }
 }
