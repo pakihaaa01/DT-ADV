@@ -79,7 +79,7 @@
                         <p>{{ $item->deskripsi }}</p>
 
                         {{-- Harga sewa per hari --}}
-                        <div class="harga">Rp {{ number_format($item->harga_sewa, 0, ',', '.') }} / hari</div>
+                        <div class="harga">Rp {{ number_format($item->harga, 0, ',', '.') }} / hari</div>
 
                         {{-- Form untuk menambah produk ke keranjang --}}
                         <form action="{{ route('tambah.keranjang', $item->id) }}" method="POST">

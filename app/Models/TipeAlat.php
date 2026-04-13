@@ -27,7 +27,7 @@ class TipeAlat extends Model
         'nama_alat',    // nama alat yang ditampilkan pada UI
         'gambar',       // path file gambar
         'stok',         // jumlah stok tersedia
-        'harga_sewa',   // harga sewa per hari
+        'harga',   // harga sewa per hari
         'deskripsi',    // deskripsi alat
     ];
 

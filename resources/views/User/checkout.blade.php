@@ -69,7 +69,7 @@
         {{-- Form Checkout: metode pembayaran & submit --}}
         <div class="cart-footer"
             style="margin-top: 20px; background: rgba(255,255,255,0.03); padding: 18px; border-radius: 12px;">
-            <form action="{{ route('admin.order.store') }}" method="POST" enctype="multipart/form-data"
+            <form action="{{ route('admin.order.store') }}" method="POST"> enctype="multipart/form-data"
                 style="display:flex; flex-direction:column; gap:14px;">
                 @csrf
 

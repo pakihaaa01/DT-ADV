@@ -18,7 +18,6 @@ class DatabaseSeeder extends Seeder
             TipeAlatSeeder::class,
             UserSeeder::class,
             PembayaranSeeder::class,
-            BookingSeeder::class,
         ]);
     }
 }

@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('tipe_alat_id');
             $table->string('nama_alat');
-            $table->integer('harga_sewa');
+            $table->integer('harga');
             $table->integer('jumlah')->default(1);
             $table->timestamps();
         });

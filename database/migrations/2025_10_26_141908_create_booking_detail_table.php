@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignId('booking_id')->constrained('booking')->onDelete('cascade');
             $table->foreignId('tipe_alat_id')->constrained('tipe_alat')->onDelete('cascade');
             $table->integer('jumlah');
-            $table->decimal('harga_sewa', 12, 2);
+            $table->decimal('harga', 12, 2);
             $table->decimal('subtotal', 12, 2);
             $table->timestamps();
         });

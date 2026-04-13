@@ -53,7 +53,13 @@ Route::get('/admin/kategori_kebutuhantracking', function () {
 })->name('admin.kategori_kebutuhantracking');
 
 Route::get('/admin/kategori_outfitoutdoor', function () {
-    return view('Admin.kategori_outfitoutdoor');
+    $kategori = KategoriAlat::where('nama_kategori', 'Outfit Outdoor')->first();
+
+    $items = $kategori 
+        ? TipeAlat::where('kategori_id', $kategori->id)->get() 
+        : collect();
+
+    return view('Admin.kategori_outfitoutdoor', compact('items', 'kategori'));
 })->name('admin.kategori_outfitoutdoor');
 
 Route::get('/admin/isidata', function () {
@@ -191,6 +197,8 @@ Route::get('/admin/checkout', [CheckoutController::class, 'checkout'])->name('ad
 Route::post('/admin/checkout', [CheckoutController::class, 'store'])->name('admin.checkout.store');
 Route::post('/admin/order', [CheckoutController::class, 'placeOrder'])->name('admin.order.store');
 
+Route::get('/pesanan/{id}', [CheckoutController::class, 'detail'])->name('pesanan.detail');
+
 // DETAIL PESANAN — PUBLIC (sesuai permintaan)
 Route::get('/admin/detailpesanan/{id}', [CheckoutController::class, 'detail'])
     ->name('admin.detailpesanan');
@@ -230,3 +238,7 @@ Route::middleware('auth:admin')->group(function () {
 | OPTIONAL: jika ada route lain yang ingin dipetakan, tambahkan di bawah
 |--------------------------------------------------------------------------
 */
+Route::get('/api/produk', function () {
+    $produk = TipeAlat::all();
+    return response()->json($produk);
+});

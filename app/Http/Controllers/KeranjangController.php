@@ -59,7 +59,7 @@ class KeranjangController extends Controller
                 'tipe_alat_id' => $item->id,
                 'nama_alat'    => $item->nama_alat,
                 'gambar'       => $item->gambar,
-                'harga'        => $item->harga_sewa,
+                'harga'        => $item->harga,
                 'jumlah'       => 1,
             ]);
         }

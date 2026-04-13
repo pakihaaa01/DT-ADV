@@ -42,14 +42,14 @@
         </div>
     @endif
 
-    {{-- SECTION: daftar produk kategori Peralatan Masak --}}
+    {{-- SECTION: daftar produk kategori Outfit Outdoor --}}
     <section class="produk-container">
 
         {{-- Header kategori --}}
         <div class="produk-header">
             <div>
-                <h2>Peralatan Masak</h2>
-                <p>Praktis dan aman, cocok untuk camping dan tracking.</p>
+                <h2>{{ $kategori->nama_kategori ?? 'outfit outdoor' }}</h2>
+                <p>Perlengkapan outfit outdoor terbaik untuk aktivitas kamu.</p>
             </div>
 
             {{-- Ikon keranjang + jumlah item --}}
@@ -86,7 +86,7 @@
 
                         {{-- Harga sewa per hari --}}
                         <div class="harga">
-                            Rp {{ number_format($item->harga_sewa, 0, ',', '.') }} / hari
+                            Rp {{ number_format($item->harga, 0, ',', '.') }} / hari
                         </div>
 
                         {{-- Tombol tambah ke keranjang --}}

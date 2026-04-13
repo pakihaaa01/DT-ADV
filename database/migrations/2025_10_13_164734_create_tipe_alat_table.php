@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignId('kategori_id')->constrained('kategori_alat')->onDelete('cascade');
             $table->string('nama_alat');
             $table->integer('stok')->default(0);
-            $table->decimal('harga_sewa', 10, 2);
+            $table->decimal('harga', 10, 2);
             $table->text('deskripsi')->nullable();
             $table->timestamps();
         });

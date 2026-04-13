@@ -87,7 +87,7 @@
 
                         {{-- Harga sewa per hari --}}
                         <div class="harga">
-                            Rp {{ number_format($item->harga_sewa, 0, ',', '.') }} / hari
+                            Rp {{ number_format($item->harga, 0, ',', '.') }} / hari
                         </div>
 
                         {{-- Form tambah ke keranjang --}}

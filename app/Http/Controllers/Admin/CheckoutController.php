@@ -17,10 +17,11 @@ use Illuminate\Support\Str;
 
 class CheckoutController extends Controller
 {
-    // Simpan data pesanan baru
+    // =========================
+    // 1. SIMPAN DATA PESANAN
+    // =========================
     public function store(Request $request): RedirectResponse
     {
-        // Validasi input untuk memastikan data minimal yang diperlukan tersedia
         $data = $request->validate([
             'nama' => 'required|string|max:255',
             'whatsapp' => 'required|string|max:50',
@@ -29,191 +30,133 @@ class CheckoutController extends Controller
             'tanggal_mulai' => 'required|date|after_or_equal:today',
         ]);
 
-        // Pastikan 'hari' sebagai integer
         $hari = (int) $data['hari'];
 
-        // Hitung tanggal kembali berdasarkan tanggal mulai + jumlah hari
-        $tanggalMulai = Carbon::parse($data['tanggal_mulai'])->startOfDay();
-        $tanggalKembali = $tanggalMulai->copy()->addDays($hari);
-        $data['tanggal_kembali'] = $tanggalKembali->toDateString();
+        $tanggalMulai = Carbon::parse($data['tanggal_mulai']);
+        $data['tanggal_kembali'] = $tanggalMulai->copy()->addDays($hari)->toDateString();
 
-        // Sambungkan pesanan ini ke session saat ini sehingga kita tahu keranjang milik siapa
         $data['session_id'] = $request->session()->getId();
 
-        // Simpan pesanan ke database (tabel pesanan)
         $pesanan = Pesanan::create($data);
 
-        // Simpan ID pesanan ke session agar mudah diakses selama proses checkout
         $request->session()->put('pesanan_id', $pesanan->id);
 
-        // Redirect ke halaman checkout dengan pesan sukses
-        return redirect()->route('admin.checkout', ['pesanan_id' => $pesanan->id])
-            ->with('success', 'Pesanan berhasil disimpan. ID: ' . $pesanan->id);
+        return redirect()->route('admin.checkout', ['pesanan_id' => $pesanan->id]);
     }
 
-
-    // Tampilkan halaman checkout
+    // =========================
+    // 2. HALAMAN CHECKOUT
+    // =========================
     public function checkout(Request $request): View
     {
-        // Ambil ID session untuk mencari keranjang yang sesuai
         $sessionId = $request->session()->getId();
 
-        // Ambil semua item keranjang yang terkait session ini
-        /** @var \Illuminate\Database\Eloquent\Collection<int, \App\Models\Keranjang> $cart */
         $cart = Keranjang::where('session_id', $sessionId)->get();
 
-        // Hitung subtotal per hari: jumlah setiap item dikalikan harga per item
-        $subtotalPerDay = $cart->sum(function (Keranjang $item): float {
-            return (float) $item->harga * (int) $item->jumlah;
-        });
+        $subtotalPerDay = $cart->sum(fn($item) => $item->harga * $item->jumlah);
 
-        // Coba ambil pesanan dari query parameter atau dari session jika tersedia
-        /** @var Pesanan|null $pesanan */
-        $pesanan = null;
-        if ($request->has('pesanan_id')) {
-            $pesanan = Pesanan::find($request->query('pesanan_id'));
-        } elseif ($request->session()->has('pesanan_id')) {
-            $pesanan = Pesanan::find($request->session()->get('pesanan_id'));
-        }
+        $pesanan = Pesanan::find(
+            $request->query('pesanan_id') ?? $request->session()->get('pesanan_id')
+        );
 
-        // Jika pesanan menyewa lebih dari 1 hari, kalikan subtotal per hari
-        $total = $subtotalPerDay;
-        if ($pesanan && (int) $pesanan->hari > 1) {
-            $total = $subtotalPerDay * (int) $pesanan->hari;
-        }
+        $total = $pesanan
+            ? $subtotalPerDay * max(1, $pesanan->hari)
+            : $subtotalPerDay;
 
-        // Render halaman checkout (view: Admin.checkout) dan kirim data yang diperlukan
-        return view('Admin.checkout', compact('cart', 'subtotalPerDay', 'total', 'pesanan'));
+        return view('User.checkout', compact('cart', 'subtotalPerDay', 'total', 'pesanan'));
     }
 
-
-    // Proses pembuatan pesanan & pembayaran
+    // =========================
+    // 3. PROSES PESANAN
+    // =========================
     public function placeOrder(Request $request): RedirectResponse
     {
-        // Validasi input penting untuk proses pembayaran
         $request->validate([
-            'pesanan_id' => 'required|integer|exists:pesanan,id',
-            'metode_pembayaran' => 'required|string|in:Cash,QRIS',
+            'pesanan_id' => 'required|exists:pesanan,id',
+            'metode_pembayaran' => 'required|in:Cash,QRIS',
             'bukti' => 'nullable|image|max:2048',
         ]);
 
-        // Ambil pesanan yang dimaksud; jika tidak ada, tampilkan 404
-        /** @var Pesanan $pesanan */
         $pesanan = Pesanan::findOrFail($request->pesanan_id);
 
-        // Gunakan session_id yang disimpan di pesanan, atau fallback ke session saat ini
         $sessionId = $pesanan->session_id ?? $request->session()->getId();
 
-        // Ambil isi keranjang berdasarkan session
-        /** @var \Illuminate\Database\Eloquent\Collection<int, \App\Models\Keranjang> $cart */
         $cart = Keranjang::where('session_id', $sessionId)->get();
 
-        // Jika keranjang kosong, batalkan proses
         if ($cart->isEmpty()) {
-            return back()->with('error', 'Keranjang kosong. Tidak ada item untuk dipesan.');
+            return back()->with('error', 'Keranjang kosong.');
         }
 
-        // Mulai transaksi DB agar semua operasi sukses atau digagalkan bersamaan
         DB::beginTransaction();
+
         try {
-            // Hitung subtotal per hari dan total (mengalikan hari sewa)
-            $subtotalPerDay = $cart->sum(fn(Keranjang $item): float => (float)$item->harga * (int)$item->jumlah);
-            $total = $subtotalPerDay * max(1, (int) $pesanan->hari);
+            // Hitung total
+            $subtotal = $cart->sum(fn($i) => $i->harga * $i->jumlah);
+            $total = $subtotal * max(1, $pesanan->hari);
 
-            // Buat kode pembayaran unik (untuk referensi pelanggan/admin)
-            $kode = 'PAY-' . strtoupper(Str::random(8));
-
-            // Simpan record pembayaran
+            // Simpan pembayaran
             $pembayaran = Pembayaran::create([
-                'user_id' => Auth::id() ?? null,
+                'user_id' => Auth::id(),
                 'pesanan_id' => $pesanan->id,
                 'jumlah' => $total,
                 'metode_pembayaran' => $request->metode_pembayaran,
-                'kode_pembayaran' => $kode,
+                'kode_pembayaran' => 'PAY-' . strtoupper(Str::random(6)),
                 'status' => 'pending',
             ]);
 
-            // Jika ada file bukti (misal: foto QRIS), unggah dan simpan path di pembayaran
+            // Upload bukti
             if ($request->hasFile('bukti')) {
-                $path = $request->file('bukti')->store('bukti_pembayaran', 'public');
+                $path = $request->file('bukti')->store('bukti', 'public');
                 $pembayaran->update(['bukti' => $path]);
             }
 
-            // Simpan snapshot item pesanan ke tabel terkait
-            $itemsData = $cart->map(function (Keranjang $c): array {
-                return [
-                    'product_id' => $c->tipe_alat_id,
-                    'nama_alat' => $c->nama_alat,
-                    'jumlah' => $c->jumlah,
-                    'harga' => $c->harga,
-                    'subtotal' => (float) $c->harga * (int) $c->jumlah, // subtotal per hari
-                ];
-            })->toArray();
-
-            // Gunakan relasi pesanan->items untuk membuat banyak record sekaligus
-            $pesanan->items()->createMany($itemsData);
-
-            // Setelah snapshot dibuat, kosongkan keranjang untuk session ini
-            Keranjang::where('session_id', $sessionId)->delete();
-
-            // Tentukan status pesanan berdasarkan metode pembayaran
-            $status = ($request->metode_pembayaran === 'Cash')
-                ? 'Menunggu Pengambilan'
-                : 'Menunggu Verifikasi';
-
-            // Update pesanan dengan informasi metode pembayaran dan status akhir
-            $pesanan->update([
-                'metode_pembayaran' => $request->metode_pembayaran,
-                'status' => $status,
+            // Simpan item pesanan
+            $items = $cart->map(fn($c) => [
+                'product_id' => $c->tipe_alat_id,
+                'nama_alat' => $c->nama_alat,
+                'jumlah' => $c->jumlah,
+                'harga' => $c->harga,
+                'subtotal' => $c->harga * $c->jumlah,
             ]);
 
-            // Hapus id pesanan dari session karena proses checkout sudah selesai
+            $pesanan->items()->createMany($items->toArray());
+
+            // Hapus keranjang
+            Keranjang::where('session_id', $sessionId)->delete();
+
+            // Update status
+            $pesanan->update([
+                'metode_pembayaran' => $request->metode_pembayaran,
+                'status' => $request->metode_pembayaran === 'Cash'
+                    ? 'Menunggu Pengambilan'
+                    : 'Menunggu Verifikasi'
+            ]);
+
             $request->session()->forget('pesanan_id');
 
-            // Commit transaksi: semua perubahan disimpan permanen
             DB::commit();
 
-            // Redirect ke halaman detail pesanan dengan pesan sukses termasuk kode pembayaran
-            return redirect()->route('admin.detailpesanan', ['id' => $pesanan->id])
-                ->with('success', 'Pesanan berhasil dibuat. Kode pembayaran: ' . $pembayaran->kode_pembayaran);
+            // 🔥 INI YANG PENTING
+            return redirect()->route('admin.detailpesanan', $pesanan->id);
+
         } catch (\Throwable $e) {
-            // Jika terjadi kesalahan, batalkan semua perubahan di database
             DB::rollBack();
+            Log::error($e->getMessage());
 
-            // Catat log error untuk debugging developer
-            Log::error('Error placeOrder: ' . $e->getMessage());
-
-            // Kembalikan ke halaman sebelumnya dengan pesan error yang ramah
-            return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+            return back()->with('error', 'Gagal membuat pesanan');
         }
     }
 
-
-    // Tampilkan detail pesanan (nota)
-    public function detail(int $id): View
+    // =========================
+    // 4. DETAIL PESANAN
+    // =========================
+    public function detail($id): View
     {
-        // Ambil pesanan berikut relasi items dan pembayaran
-        /** @var Pesanan $pesanan */
         $pesanan = Pesanan::with(['items', 'pembayaran'])->findOrFail($id);
 
-        // Hitung subtotal per hari dari snapshot item di tabel pesanan_items
-        $subtotalPerDay = $pesanan->items->sum(function ($item) {
-            return $item->subtotal;
-        });
+        $subtotal = $pesanan->items->sum('subtotal');
+        $total = $subtotal * max(1, $pesanan->hari);
 
-        // Total adalah subtotal per hari dikalikan jumlah hari sewa
-        $total = $subtotalPerDay * max(1, (int) $pesanan->hari);
-
-        // Ambil pembayaran terakhir (jika ada)
-        $pembayaran = $pesanan->pembayaran()->latest()->first();
-
-        // Render view nota dan kirim data yang dibutuhkan
-        return view('Admin.detailpesanan', [
-            'pesanan' => $pesanan,
-            'cart' => $pesanan->items,
-            'subtotalPerDay' => $subtotalPerDay,
-            'total' => $total,
-            'pembayaran' => $pembayaran,
-        ]);
+        return view('Admin.detailpesanan', compact('pesanan', 'total'));
     }
 }

@@ -67,7 +67,7 @@
 
                         <div class="col-md-4 mb-3">
                             <label class="form-label fw-semibold">Harga Sewa (Rp)</label>
-                            <input type="number" name="harga_sewa" class="form-control" min="0" required>
+                            <input type="number" name="harga" class="form-control" min="0" required>
                         </div>
 
                         <div class="col-md-4 mb-3">
@@ -132,7 +132,7 @@
                                         <td>{{ $item->nama_alat }}</td>
                                         <td>{{ $item->kategori->nama_kategori ?? '-' }}</td>
                                         <td>{{ $item->stok }}</td>
-                                        <td>Rp {{ number_format($item->harga_sewa, 0, ',', '.') }}</td>
+                                        <td>Rp {{ number_format($item->harga, 0, ',', '.') }}</td>
                                         <td>{{ $item->deskripsi }}</td>
 
                                         <!-- Tombol untuk edit & hapus -->
@@ -208,8 +208,8 @@
 
                                                             <div class="col-md-4 mb-3">
                                                                 <label class="form-label">Harga Sewa (Rp)</label>
-                                                                <input type="number" name="harga_sewa"
-                                                                    class="form-control" value="{{ $item->harga_sewa }}"
+                                                                <input type="number" name="harga"
+                                                                    class="form-control" value="{{ $item->harga }}"
                                                                     min="0" required>
                                                             </div>
 

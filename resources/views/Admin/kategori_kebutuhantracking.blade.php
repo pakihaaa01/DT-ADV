@@ -123,6 +123,13 @@
                 </div>
             </a>
 
+            <a href="{{ route('admin.kategori_hydropack') }}" class="card-link">
+                <div class="product-card">
+                    <img src="{{ asset('sepatu.jpg') }}" alt="sepatu">
+                    <p>Sepatu</p>
+                </div>
+            </a>
+
         </div>
     </section>
 
