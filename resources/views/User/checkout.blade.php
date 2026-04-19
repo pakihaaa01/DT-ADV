@@ -19,6 +19,24 @@
             <h2>Checkout</h2>
         </div>
 
+        {{-- 🔥 TAMBAHAN: Tampilkan pesan Error jika gagal validasi/keranjang kosong --}}
+        @if (session('error'))
+            <div style="background:#ff4d4d; color:white; padding:10px 15px; border-radius:8px; margin-bottom:15px; font-weight:bold;">
+                ⚠ {{ session('error') }}
+            </div>
+        @endif
+
+        @if ($errors->any())
+            <div style="background:#ff4d4d; color:white; padding:10px 15px; border-radius:8px; margin-bottom:15px; font-weight:bold;">
+                ⚠ Terjadi kesalahan:
+                <ul style="margin-top: 5px; margin-bottom: 0;">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
         {{-- Tampilkan data pemesan jika tersedia --}}
         @if (!empty($pesanan))
             <div class="buyer-card"
@@ -32,7 +50,7 @@
         @else
             {{-- Jika belum isi data pemesan --}}
             <div style="background:#f51919; padding:10px; border-radius:8px; margin-bottom:15px;">
-                <p>Silakan lengkapi <a href="{{ route('admin.isidata') }}">data pemesan</a> terlebih dahulu.</p>
+                <p style="color: white">Silakan lengkapi <a href="{{ route('admin.isidata') }}" style="color: #FFD700; text-decoration: underline;">data pemesan</a> terlebih dahulu.</p>
             </div>
         @endif
 
@@ -69,7 +87,9 @@
         {{-- Form Checkout: metode pembayaran & submit --}}
         <div class="cart-footer"
             style="margin-top: 20px; background: rgba(255,255,255,0.03); padding: 18px; border-radius: 12px;">
-            <form action="{{ route('admin.order.store') }}" method="POST"> enctype="multipart/form-data"
+            
+            {{-- 🔥 PERBAIKAN: Posisi enctype sudah dimasukkan ke dalam tag form dengan benar --}}
+            <form action="{{ route('admin.order.store') }}" method="POST" enctype="multipart/form-data"
                 style="display:flex; flex-direction:column; gap:14px;">
                 @csrf
 
@@ -103,7 +123,6 @@
 
                     {{-- Container gambar QRIS (tampil saat QRIS dipilih) --}}
                     <div id="qrisImageContainer" style="display:none; text-align:center; margin-top:12px;">
-                        {{-- Ganti src dengan gambar QRIS yang valid --}}
                         <img src="{{ asset('DT ADVENTURE.png') }}" alt="QRIS Code"
                             style="width:280px; border-radius:12px; box-shadow:0 6px 18px rgba(0,0,0,0.12);">
                         <p style="color:#ccc; margin-top:8px; font-size:0.95rem;">Scan kode di atas untuk melakukan
@@ -114,7 +133,7 @@
                     <div id="buktiWrapper" style="display:none; margin-top:12px;">
                         <label style="display:block; color:#eee; margin-bottom:6px;">Unggah Bukti Pembayaran
                             (QRIS)</label>
-                        <input type="file" name="bukti" accept="image/*" />
+                        <input type="file" name="bukti" accept="image/*" style="color: white;"/>
                         <div style="font-size:12px; color:#ccc; margin-top:6px;">Format: JPG/PNG. Max: 2MB.</div>
                     </div>
                 </div>
@@ -137,7 +156,6 @@
             {{-- JavaScript: toggle tampilan QR image & upload file --}}
             <script>
                 (function() {
-                    // ambil elemen
                     const payQris = document.getElementById('payQris');
                     const payCash = document.getElementById('payCash');
                     const qrisImageContainer = document.getElementById('qrisImageContainer');
@@ -155,11 +173,9 @@
                         }
                     }
 
-                    // pasang event listener
                     payQris.addEventListener('change', updatePaymentUI);
                     payCash.addEventListener('change', updatePaymentUI);
 
-                    // inisialisasi (cek keadaan awal)
                     updatePaymentUI();
                 })();
             </script>

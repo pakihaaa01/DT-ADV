@@ -4,26 +4,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    {{-- Judul halaman yang tampil di tab browser --}}
     <title>DT Adventure</title>
-
-    {{-- Memuat stylesheet utama dari folder public --}}
     <link rel="stylesheet" href="{{ asset('style.css') }}">
 </head>
 
 <body>
 
-    {{-- HEADER: logo dan navigasi utama --}}
+    {{-- HEADER --}}
     <header>
         <div class="header-container">
-
-            {{-- Logo situs --}}
             <div class="logo-container">
                 <img src="{{ asset('logo.png') }}" alt="DT Adventure Logo" class="logo">
             </div>
-
-            {{-- Menu navigasi (named routes Laravel) --}}
             <nav>
                 <a href="{{ route('User.dashboard') }}">BERANDA</a>
                 <a href="{{ route('admin.pricelist') }}">PRICELIST</a>
@@ -34,32 +26,29 @@
         </div>
     </header>
 
-    {{-- SECTION: daftar sub-kategori kebutuhan tracking --}}
+    {{-- SECTION: Kategori Kebutuhan Tracking --}}
     <section class="produk-container">
 
-        {{-- Header kategori: judul, deskripsi singkat, dan ikon keranjang --}}
+        {{-- Header kategori --}}
         <div class="produk-header">
             <div>
                 <h2>Kebutuhan Tracking</h2>
                 <p>Semua yang kamu butuhkan saat tracking ada disini, dari carrier hingga kacamata gunung.</p>
             </div>
 
-            {{-- Ikon keranjang: menampilkan jumlah item di session (jika ada) --}}
-            <a href="{{ route('admin.keranjang') }}" class="cart-icon-link">
-                🛒
+            {{-- IKON KERANJANG DINAMIS (LANGSUNG DARI DATABASE) --}}
+            <a href="{{ route('admin.keranjang') }}" class="cart-icon-link">🛒
                 @php
-                    $cartCount = session('cart') ? array_sum(array_column(session('cart'), 'jumlah')) : 0;
+                    $sessionId = request()->session()->getId();
+                    $cartCount = \App\Models\Keranjang::where('session_id', $sessionId)->sum('jumlah');
                 @endphp
-                @if ($cartCount > 0)
-                    <span class="cart-count">{{ $cartCount }}</span>
-                @endif
+                <span class="cart-badge">{{ $cartCount }}</span>
             </a>
         </div>
 
         {{-- GRID: daftar sub-kategori sebagai card-link --}}
         <div class="produk-grid">
 
-            {{-- Sub-kategori: Carrier --}}
             <a href="{{ route('admin.kategori_carrier') }}" class="card-link">
                 <div class="product-card">
                     <img src="{{ asset('carrier.jpg') }}" alt="Carrier">
@@ -67,7 +56,6 @@
                 </div>
             </a>
 
-            {{-- Sub-kategori: Daypack --}}
             <a href="{{ route('admin.kategori_daypack') }}" class="card-link">
                 <div class="product-card">
                     <img src="{{ asset('daypack.jpg') }}" alt="Daypack">
@@ -75,7 +63,6 @@
                 </div>
             </a>
 
-            {{-- Sub-kategori: Hydropack --}}
             <a href="{{ route('admin.kategori_hydropack') }}" class="card-link">
                 <div class="product-card">
                     <img src="{{ asset('hydropack.jpg') }}" alt="Hydropack">
@@ -83,7 +70,6 @@
                 </div>
             </a>
 
-            {{-- Sub-kategori: Tracking Pole --}}
             <a href="{{ route('admin.kategori_trackingpole') }}" class="card-link">
                 <div class="product-card">
                     <img src="{{ asset('trackingpole.jpg') }}" alt="Tracking Pole">
@@ -91,7 +77,6 @@
                 </div>
             </a>
 
-            {{-- Sub-kategori: Headlamp --}}
             <a href="{{ route('admin.kategori_headlamp') }}" class="card-link">
                 <div class="product-card">
                     <img src="{{ asset('headlamp.jpg') }}" alt="Headlamp">
@@ -99,7 +84,6 @@
                 </div>
             </a>
 
-            {{-- Sub-kategori: Powerbank --}}
             <a href="{{ route('admin.kategori_powerbank') }}" class="card-link">
                 <div class="product-card">
                     <img src="{{ asset('powerbank.jpg') }}" alt="Powerbank">
@@ -107,7 +91,6 @@
                 </div>
             </a>
 
-            {{-- Sub-kategori: Kacamata Gunung --}}
             <a href="{{ route('admin.kategori_kacamatagunung') }}" class="card-link">
                 <div class="product-card">
                     <img src="{{ asset('kacamatagunung.jpg') }}" alt="Kacamata Gunung">
@@ -115,7 +98,6 @@
                 </div>
             </a>
 
-            {{-- Sub-kategori: Timbangan Portable --}}
             <a href="{{ route('admin.kategori_timbanganportable') }}" class="card-link">
                 <div class="product-card">
                     <img src="{{ asset('timbanganportable.jpg') }}" alt="Timbangan Portable">
@@ -123,7 +105,8 @@
                 </div>
             </a>
 
-            <a href="{{ route('admin.kategori_hydropack') }}" class="card-link">
+            {{-- Link Sepatu sudah diperbaiki rutenya --}}
+            <a href="{{ route('admin.kategori_sepatuhiking') }}" class="card-link">
                 <div class="product-card">
                     <img src="{{ asset('sepatu.jpg') }}" alt="sepatu">
                     <p>Sepatu</p>
@@ -133,6 +116,43 @@
         </div>
     </section>
 
-</body>
+    {{-- JAVASCRIPT AJAX --}}
+    <script>
+    function tambahKeranjang(id) {
+        fetch(`/tambah-ke-keranjang/${id}`, { 
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            }
+        })
+        .then(res => {
+            if (!res.ok) throw new Error("Gagal request ke server");
+            return res.json();
+        })
+        .then(data => {
+            if(data.success) {
+                updateCartBadge();
+                alert("Produk berhasil ditambahkan ke keranjang!");
+            }
+        })
+        .catch(err => {
+            console.error("Terjadi kesalahan:", err);
+            alert("Gagal menambahkan ke keranjang.");
+        });
+    }
 
+    function updateCartBadge() {
+        fetch('/cart/count')
+        .then(res => res.json())
+        .then(data => {
+            const badge = document.querySelector('.cart-badge');
+            if (badge) badge.innerText = data.count;
+        })
+        .catch(err => console.error("Gagal update badge:", err));
+    }
+    </script>
+
+</body>
 </html>

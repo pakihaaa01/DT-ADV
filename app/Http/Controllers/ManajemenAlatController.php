@@ -31,7 +31,7 @@ class ManajemenAlatController extends Controller
             ? $request->file('gambar')->store('gambar_alat', 'public')
             : null;
 
-        // 🔥 PAKAI ARRAY DULU BIAR KELIHATAN JELAS
+        // PAKAI ARRAY DULU BIAR KELIHATAN JELAS
         $data = [
             'kategori_id' => $request->kategori_id,
             'nama_alat'   => $request->nama_alat,
@@ -41,7 +41,7 @@ class ManajemenAlatController extends Controller
             'gambar'      => $path,
         ];
 
-        // 🔥 DEBUG (hapus kalau sudah aman)
+        // DEBUG (hapus kalau sudah aman)
         // dd($data);
 
         TipeAlat::create($data);

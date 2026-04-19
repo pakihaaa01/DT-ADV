@@ -57,6 +57,16 @@
             .cart-press:active {
                 transform: scale(0.94);
             }
+            
+            /* Mengatur class badge agar sesuai dengan desain yang lain */
+            .cart-badge {
+                background: red;
+                color: white;
+                font-size: 12px;
+                padding: 3px 7px;
+                border-radius: 50%;
+                margin-left: 5px;
+            }
         </style>
 
         {{-- Tombol untuk menuju keranjang penyewaan --}}
@@ -68,19 +78,18 @@
                    margin-top:20px;">
 
             {{-- Link menuju halaman keranjang --}}
-            <a href="{{ route('admin.keranjang') }}" class="cart-icon-link">
+            <a href="{{ route('admin.keranjang') }}" class="cart-icon-link" style="text-decoration: none; color: inherit; font-weight: bold;">
 
                 Keranjang Saya 🛒
 
-                {{-- Hitung total item di keranjang (mengambil dari session Laravel) --}}
+                {{-- Ambil jumlah langsung dari database berdasarkan Session ID --}}
                 @php
-                    $cartCount = session('cart') ? array_sum(array_column(session('cart'), 'jumlah')) : 0;
+                    $sessionId = request()->session()->getId();
+                    $cartCount = \App\Models\Keranjang::where('session_id', $sessionId)->sum('jumlah');
                 @endphp
 
-                {{-- Jika ada isi keranjang, tampilkan jumlahnya --}}
-                @if ($cartCount > 0)
-                    <span class="cart-count">{{ $cartCount }}</span>
-                @endif
+                <span class="cart-badge">{{ $cartCount }}</span>
+                
             </a>
 
         </div>

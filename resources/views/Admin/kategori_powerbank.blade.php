@@ -4,26 +4,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    {{-- Judul halaman --}}
     <title>DT Adventure</title>
-
-    {{-- File CSS utama --}}
     <link rel="stylesheet" href="{{ asset('style.css') }}">
 </head>
 
 <body>
 
-    {{-- HEADER: logo & navigasi --}}
+    {{-- HEADER --}}
     <header>
         <div class="header-container">
-
-            {{-- Logo utama --}}
             <div class="logo-container">
                 <img src="{{ asset('logo.png') }}" alt="DT Adventure Logo" class="logo">
             </div>
-
-            {{-- Navigasi halaman --}}
             <nav>
                 <a href="{{ route('User.dashboard') }}">BERANDA</a>
                 <a href="{{ route('admin.pricelist') }}">PRICELIST</a>
@@ -31,83 +23,87 @@
                 <a href="{{ route('admin.hubungi') }}">HUBUNGI KAMI</a>
                 <a href="{{ route('adminn.login') }}">ADMIN</a>
             </nav>
-
         </div>
     </header>
 
-    {{-- Notifikasi sukses setelah tambah ke keranjang --}}
-    @if (session('success'))
-        <div class="alert alert-success">
-            {{ session('success') }}
-        </div>
-    @endif
-
-    {{-- SECTION: daftar produk kategori Powerbank --}}
+    {{-- SECTION PRODUK --}}
     <section class="produk-container">
 
-        {{-- Header kategori + ikon keranjang --}}
         <div class="produk-header">
             <div>
+                {{-- Header --}}
                 <h2>Powerbank</h2>
                 <p>Cadangan daya praktis untuk gadget saat di gunung.</p>
             </div>
 
-            {{-- Ikon keranjang + jumlah item --}}
-            <a href="{{ route('admin.keranjang') }}" class="cart-icon-link">
-                🛒
-
+            {{-- IKON KERANJANG DINAMIS (LANGSUNG DARI DATABASE) --}}
+            <a href="{{ route('admin.keranjang') }}" class="cart-icon-link">🛒
                 @php
-                    $cartCount = session('cart') ? array_sum(array_column(session('cart'), 'jumlah')) : 0;
+                    $sessionId = request()->session()->getId();
+                    $cartCount = \App\Models\Keranjang::where('session_id', $sessionId)->sum('jumlah');
                 @endphp
-
-                {{-- Tampilkan angka jika ada item --}}
-                @if ($cartCount > 0)
-                    <span class="cart-count">{{ $cartCount }}</span>
-                @endif
+                <span class="cart-badge">{{ $cartCount }}</span>
             </a>
         </div>
 
-        {{-- Grid produk --}}
+        {{-- GRID PRODUK --}}
         <div class="produk-grid">
-
-            {{-- Loop item produk --}}
             @forelse($items as $item)
                 <div class="produk-card">
-
-                    {{-- Gambar item --}}
                     <img src="{{ asset('storage/' . $item->gambar) }}" alt="{{ $item->nama_alat }}" width="100">
-
                     <div class="produk-info">
-
-                        {{-- Nama produk --}}
                         <h3>{{ $item->nama_alat }}</h3>
-
-                        {{-- Deskripsi produk --}}
                         <p>{{ $item->deskripsi }}</p>
-
-                        {{-- Harga sewa per hari --}}
                         <div class="harga">
                             Rp {{ number_format($item->harga, 0, ',', '.') }} / hari
                         </div>
-
-                        {{-- Tombol tambah ke keranjang --}}
-                        <form action="{{ route('tambah.keranjang', $item->id) }}" method="POST">
-                            @csrf
-                            <button type="submit" class="tambah-btn">Tambah</button>
-                        </form>
-
+                        <button class="tambah-btn" onclick="tambahKeranjang({{ $item->id }})">Tambah</button>
                     </div>
                 </div>
-
-                {{-- Jika kategori kosong --}}
             @empty
                 <p class="text-center">Belum ada alat pada kategori ini.</p>
             @endforelse
-
         </div>
 
     </section>
 
-</body>
+    {{-- JAVASCRIPT AJAX --}}
+    <script>
+    function tambahKeranjang(id) {
+        fetch(`/tambah-ke-keranjang/${id}`, { 
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            }
+        })
+        .then(res => {
+            if (!res.ok) throw new Error("Gagal request ke server");
+            return res.json();
+        })
+        .then(data => {
+            if(data.success) {
+                updateCartBadge();
+                alert("Produk berhasil ditambahkan ke keranjang!");
+            }
+        })
+        .catch(err => {
+            console.error("Terjadi kesalahan:", err);
+            alert("Gagal menambahkan ke keranjang.");
+        });
+    }
 
+    function updateCartBadge() {
+        fetch('/cart/count')
+        .then(res => res.json())
+        .then(data => {
+            const badge = document.querySelector('.cart-badge');
+            if (badge) badge.innerText = data.count;
+        })
+        .catch(err => console.error("Gagal update badge:", err));
+    }
+    </script>
+
+</body>
 </html>

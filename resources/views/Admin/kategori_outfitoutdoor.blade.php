@@ -4,26 +4,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    {{-- Judul halaman --}}
-    <title>DT Adventure</title>
-
-    {{-- Mengambil file CSS utama --}}
+    <title>DT Adventure - Outfit Outdoor</title>
     <link rel="stylesheet" href="{{ asset('style.css') }}">
 </head>
 
 <body>
 
-    {{-- HEADER: berisi logo dan menu navigasi --}}
+    {{-- HEADER --}}
     <header>
         <div class="header-container">
-
-            {{-- Logo utama --}}
             <div class="logo-container">
                 <img src="{{ asset('logo.png') }}" alt="DT Adventure Logo" class="logo">
             </div>
-
-            {{-- Navigasi menu --}}
             <nav>
                 <a href="{{ route('User.dashboard') }}">BERANDA</a>
                 <a href="{{ route('admin.pricelist') }}">PRICELIST</a>
@@ -31,82 +23,69 @@
                 <a href="{{ route('admin.hubungi') }}">HUBUNGI KAMI</a>
                 <a href="{{ route('adminn.login') }}">ADMIN</a>
             </nav>
-
         </div>
     </header>
 
-    {{-- Notifikasi sukses setelah tambah ke keranjang --}}
-    @if (session('success'))
-        <div class="alert alert-success">
-            {{ session('success') }}
-        </div>
-    @endif
-
-    {{-- SECTION: daftar produk kategori Outfit Outdoor --}}
+    {{-- SECTION: Kategori Outfit Outdoor --}}
     <section class="produk-container">
 
         {{-- Header kategori --}}
         <div class="produk-header">
             <div>
-                <h2>{{ $kategori->nama_kategori ?? 'outfit outdoor' }}</h2>
-                <p>Perlengkapan outfit outdoor terbaik untuk aktivitas kamu.</p>
+                <h2>Outfit Outdoor</h2>
+                <p>Lengkapi gaya petualanganmu dengan pakaian outdoor yang nyaman dan aman.</p>
             </div>
 
-            {{-- Ikon keranjang + jumlah item --}}
-            <a href="{{ route('admin.keranjang') }}" class="cart-icon-link">
-                🛒
-
+            {{-- IKON KERANJANG DINAMIS --}}
+            <a href="{{ route('admin.keranjang') }}" class="cart-icon-link">🛒
                 @php
-                    $cartCount = session('cart') ? array_sum(array_column(session('cart'), 'jumlah')) : 0;
+                    $sessionId = request()->session()->getId();
+                    $cartCount = \App\Models\Keranjang::where('session_id', $sessionId)->sum('jumlah');
                 @endphp
-
-                @if ($cartCount > 0)
-                    <span class="cart-count">{{ $cartCount }}</span>
-                @endif
+                <span class="cart-badge">{{ $cartCount }}</span>
             </a>
         </div>
 
-        {{-- Grid produk --}}
+        {{-- GRID: daftar sub-kategori sebagai card-link --}}
         <div class="produk-grid">
 
-            {{-- Loop item dalam kategori --}}
-            @forelse($items as $item)
-                <div class="produk-card">
-
-                    {{-- Gambar item --}}
-                    <img src="{{ asset('storage/' . $item->gambar) }}" alt="{{ $item->nama_alat }}" width="100">
-
-                    <div class="produk-info">
-
-                        {{-- Nama produk --}}
-                        <h3>{{ $item->nama_alat }}</h3>
-
-                        {{-- Deskripsi alat --}}
-                        <p>{{ $item->deskripsi }}</p>
-
-                        {{-- Harga sewa per hari --}}
-                        <div class="harga">
-                            Rp {{ number_format($item->harga, 0, ',', '.') }} / hari
-                        </div>
-
-                        {{-- Tombol tambah ke keranjang --}}
-                        <form action="{{ route('tambah.keranjang', $item->id) }}" method="POST">
-                            @csrf
-                            <button type="submit" class="tambah-btn">Tambah</button>
-                        </form>
-
-                    </div>
+            <a href="{{ route('admin.kategori_sepatuhiking') }}" class="card-link">
+                <div class="product-card">
+                    <img src="{{ asset('sepatuhiking.jpg') }}" alt="Sepatu Hiking">
+                    <p>Sepatu Hiking</p>
                 </div>
+            </a>
 
-                {{-- Jika kategori kosong --}}
-            @empty
-                <p class="text-center">Belum ada alat pada kategori ini.</p>
-            @endforelse
+            <a href="{{ route('admin.kategori_jaketgorpcore') }}" class="card-link">
+                <div class="product-card">
+                    <img src="{{ asset('jaketgorpcore.jpg') }}" alt="Jaket Gorpcore">
+                    <p>Jaket Gorpcore</p>
+                </div>
+            </a>
+
+            <a href="{{ route('admin.kategori_jaketgelembung') }}" class="card-link">
+                <div class="product-card">
+                    <img src="{{ asset('jaketgelembung.jpg') }}" alt="Jaket Gelembung">
+                    <p>Jaket Gelembung</p>
+                </div>
+            </a>
+
+            <a href="{{ route('admin.kategori_jaketantiuv') }}" class="card-link">
+                <div class="product-card">
+                    <img src="{{ asset('JAKETANTIUV.jpg') }}" alt="Jaket Anti UV">
+                    <p>Jaket Anti UV</p>
+                </div>
+            </a>
+
+            <a href="{{ route('admin.kategori_celanacargo') }}" class="card-link">
+                <div class="product-card">
+                    <img src="{{ asset('celanacargo.jpg') }}" alt="Celana Cargo">
+                    <p>Celana Cargo</p>
+                </div>
+            </a>
 
         </div>
-
     </section>
 
 </body>
-
 </html>

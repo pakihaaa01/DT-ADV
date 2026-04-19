@@ -7,12 +7,49 @@
     <title>Keranjang Belanja</title>
     <link rel="stylesheet" href="{{ asset('style.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        /* CSS Tambahan untuk tombol Edit Jumlah */
+        .qty-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .btn-qty {
+            background-color: #333;
+            color: #fff;
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+        .btn-qty:hover { background-color: #555; }
+        .qty-input {
+            width: 40px;
+            text-align: center;
+            border: 1px solid #444;
+            background: #222;
+            color: white;
+            border-radius: 4px;
+            padding: 4px;
+            font-weight: bold;
+        }
+        /* Hilangkan panah spinner bawaan browser pada input number */
+        .qty-input::-webkit-outer-spin-button,
+        .qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+    </style>
 </head>
 
 <body>
     <div class="cart-page">
         <div class="cart-header">
-            <!-- Gunakan history.back() supaya mengandalkan riwayat browser -->
             <a href="#" class="back-btn" onclick="history.back(); return false;">
                 <span class="arrow">←</span> Kembali
             </a>
@@ -26,20 +63,23 @@
                 @foreach ($cart as $item)
                     <div class="cart-item">
                         <img src="{{ asset('storage/' . $item->gambar) }}" alt="{{ $item->nama_alat }}" width="100">
+                        
                         <div class="cart-info">
                             <h4>{{ $item->nama_alat }}</h4>
-                            <p>Rp {{ number_format($item->harga, 0, ',', '.') }}</p>
-                            <p>Jumlah: {{ $item->jumlah }}</p>
+                            <p>Rp {{ number_format($item->harga, 0, ',', '.') }} / hari</p>
+                            
+                            {{-- BAGIAN BARU: Kontrol Edit Jumlah --}}
+                            <div class="qty-container">
+                                <button type="button" class="btn-qty" onclick="updateQty({{ $item->id }}, -1)">-</button>
+                                <input type="number" id="qty-{{ $item->id }}" class="qty-input" value="{{ $item->jumlah }}" readonly>
+                                <button type="button" class="btn-qty" onclick="updateQty({{ $item->id }}, 1)">+</button>
+                            </div>
                         </div>
 
-                        <form id="delete-form-{{ $item->id }}" action="{{ route('keranjang.hapus', $item->id) }}"
-                            method="POST" class="delete-form">
+                        <form id="delete-form-{{ $item->id }}" action="{{ route('keranjang.hapus', $item->id) }}" method="POST" class="delete-form">
                             @csrf
                             @method('DELETE')
-                            <!-- gunakan data-id, button type button sehingga tidak submit form langsung -->
-                            <button type="button" class="btn-hapus" data-id="{{ $item->id }}">
-                                Hapus
-                            </button>
+                            <button type="button" class="btn-hapus" data-id="{{ $item->id }}">Hapus</button>
                         </form>
                     </div>
                 @endforeach
@@ -57,10 +97,9 @@
         </div>
     </div>
 
-    <!-- JS: definisikan confirmDelete sekali -->
     <script>
+        // --- 1. SCRIPT MENGHAPUS ITEM (Bawaan) ---
         document.addEventListener('DOMContentLoaded', function() {
-            // Delegation atau per-button binding
             document.querySelectorAll('.btn-hapus').forEach(function(btn) {
                 btn.addEventListener('click', function() {
                     const id = this.dataset.id;
@@ -81,6 +120,43 @@
                 });
             });
         });
+
+        // --- 2. SCRIPT EDIT JUMLAH (Baru) ---
+        function updateQty(id, change) {
+            const inputElement = document.getElementById('qty-' + id);
+            let currentQty = parseInt(inputElement.value);
+            let newQty = currentQty + change;
+
+            // Jangan biarkan jumlah menjadi 0 atau negatif
+            if (newQty < 1) return;
+
+            // Update angka di layar secara langsung agar terasa responsif
+            inputElement.value = newQty;
+
+            // Kirim permintaan ubah data ke database via AJAX
+            fetch(`/keranjang/update/${id}`, {
+                method: 'PATCH',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({ jumlah: newQty })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    // Jika gagal disimpan di server, kembalikan angkanya ke semula
+                    inputElement.value = currentQty;
+                    alert("Gagal menyimpan perubahan ke server.");
+                }
+            })
+            .catch(error => {
+                console.error("Terjadi kesalahan:", error);
+                inputElement.value = currentQty;
+                alert("Kesalahan jaringan.");
+            });
+        }
     </script>
 </body>
 

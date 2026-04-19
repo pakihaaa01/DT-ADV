@@ -54,8 +54,9 @@ class KeranjangController extends Controller
             $existing->increment('jumlah', 1);
         } else {
             // Jika belum ada → buat item keranjang baru
+            // ✅ FIXED: session_id is now inside the array
             Keranjang::create([
-                'session_id'   => $sessionId,
+                'session_id'   => $sessionId, 
                 'tipe_alat_id' => $item->id,
                 'nama_alat'    => $item->nama_alat,
                 'gambar'       => $item->gambar,
@@ -65,7 +66,9 @@ class KeranjangController extends Controller
         }
 
         // Kembali ke halaman sebelumnya dengan pesan sukses
-        return back()->with('success', "{$item->nama_alat} berhasil ditambahkan ke keranjang!");
+        return response()->json([
+            'success' => true
+        ]);
     }
 
     /**
@@ -94,9 +97,26 @@ class KeranjangController extends Controller
     }
 
     /**
-     * Mengubah jumlah item di keranjang
+     * Mengubah jumlah item di keranjang (AJAX)
      * Minimal jumlah adalah 1
-     */
+     */ 
+    public function updateQty(Request $request, $id)
+    {
+        $request->validate([
+            'jumlah' => 'required|integer|min:1'
+        ]);
+
+        $item = Keranjang::find($id);
+
+        if ($item) {
+            $item->jumlah = $request->jumlah;
+            $item->save();
+
+            return response()->json(['success' => true, 'pesan' => 'Jumlah berhasil diupdate']);
+        }
+
+        return response()->json(['success' => false, 'pesan' => 'Item tidak ditemukan'], 404);
+    }
     public function updateJumlah(Request $request, $id)
     {
         // Validasi input jumlah

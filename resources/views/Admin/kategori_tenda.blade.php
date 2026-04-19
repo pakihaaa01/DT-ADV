@@ -52,7 +52,9 @@
             </div>
 
             {{-- Ikon menuju halaman keranjang --}}
-            <a href="{{ route('admin.keranjang') }}" class="cart-icon-link">🛒</a>
+            <a href="{{ route('admin.keranjang') }}" class="cart-icon-link">🛒
+                <span class="cart-badge">0</span>
+            </a>
         </div>
 
         {{-- Grid produk --}}
@@ -79,10 +81,11 @@
                         </div>
 
                         {{-- Tombol tambah ke keranjang --}}
-                        <form action="{{ route('tambah.keranjang', $item->id) }}" method="POST">
-                            @csrf
-                            <button type="submit" class="tambah-btn">Tambah</button>
-                        </form>
+                        <button
+                        class="tambah-btn"
+                        onclick="tambahKeranjang({{ $item->id }})"
+                        >
+                        Tambah </button>
 
                     </div>
                 </div>
@@ -95,6 +98,50 @@
         </div>
 
     </section>
+
+    <script>
+    function tambahKeranjang(id) {
+        // Ganti URL-nya ditambahin "-ke-" agar sesuai dengan web.php
+        fetch(`/tambah-ke-keranjang/${id}`, { 
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            }
+        })
+        .then(res => {
+            if (!res.ok) {
+                throw new Error("Gagal request ke server");
+            }
+            return res.json();
+        })
+        .then(data => {
+            if(data.success) {
+                updateCartBadge();
+                alert("Produk berhasil ditambahkan ke keranjang!");
+            }
+        })
+        .catch(err => {
+            console.error("Terjadi kesalahan:", err);
+            alert("Gagal menambahkan ke keranjang.");
+        });
+    }
+
+    function updateCartBadge() {
+        fetch('/cart/count')
+        .then(res => res.json())
+        .then(data => {
+            const badge = document.querySelector('.cart-badge');
+            if (badge) {
+                badge.innerText = data.count;
+            }
+        })
+        .catch(err => console.error("Gagal update badge:", err));
+    }
+</script>
+
+
 
 </body>
 

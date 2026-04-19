@@ -125,7 +125,6 @@
             align-items: center;
             gap: 8px;
             text-decoration: none;
-            /* agar anchor tidak bergaris */
         }
 
         .btn-print {
@@ -189,7 +188,7 @@
             <div class="meta">
                 <div><strong>Nota #{{ $pesanan->id }}</strong></div>
                 <div class="muted">Tanggal: {{ now()->format('d M Y H:i') }}</div>
-                <div class="muted">Status: {{ $pesanan->status ?? 'Menunggu Konfirmasi' }}</div>
+                <div class="muted" style="color: #d97706; font-weight:bold;">Status: {{ $pesanan->status ?? 'Menunggu Konfirmasi' }}</div>
             </div>
         </div>
 
@@ -214,6 +213,7 @@
                 <strong>Metode Pembayaran</strong>
 
                 @php
+                    $pembayaran = $pesanan->pembayaran; 
                     $metode = $pembayaran->metode_pembayaran ?? ($pesanan->metode_pembayaran ?? null);
                 @endphp
 
@@ -224,16 +224,22 @@
                         📱 QRIS — pembayaran via scan QR.
 
                         {{-- Jika ada bukti pembayaran, tampilkan --}}
-                        @if (!empty($pembayaran->bukti))
+                        @if ($pembayaran && !empty($pembayaran->bukti))
                             <div style="margin-top:10px;">
                                 <img src="{{ asset('storage/' . $pembayaran->bukti) }}" alt="Bukti Pembayaran"
-                                    width="220" style="border-radius:8px;">
+                                    width="220" style="border-radius:8px; border: 1px solid #ccc;">
                             </div>
                             <div class="muted">Kode Pembayaran: {{ $pembayaran->kode_pembayaran }}</div>
 
-                            {{-- Jika belum upload bukti --}}
+                            {{-- Peringatan Menunggu Verifikasi untuk User --}}
+                            @if ($pesanan->status === 'Menunggu Verifikasi')
+                                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd; color: #d97706; font-weight: 600;">
+                                    ⏳ Bukti pembayaran Anda sedang dicek oleh Admin.
+                                </div>
+                            @endif
+
                         @else
-                            <div class="muted">
+                            <div class="muted" style="color: red; margin-top: 8px;">
                                 Belum ada bukti pembayaran. Silakan upload via WhatsApp & simpan nota ini.
                             </div>
                         @endif
@@ -253,21 +259,21 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Nama Barang</th>
-                        <th>Harga / hari</th>
-                        <th>Jumlah</th>
-                        <th>Subtotal / hari</th>
-                        <th>Total (x {{ $pesanan->hari }} hari)</th>
+                        <th style="text-align: left;">Nama Barang</th>
+                        <th style="text-align: left;">Harga / hari</th>
+                        <th style="text-align: center;">Jumlah</th>
+                        <th style="text-align: right;">Subtotal / hari</th>
+                        <th style="text-align: right;">Total (x {{ $pesanan->hari }} hari)</th>
                     </tr>
                 </thead>
 
                 <tbody>
                     @php
-                        // Ambil item pesanan. Jika tidak ada, fallback ke session cart.
-                        $lines = $items ?? ($cart ?? collect([]));
+                        // Ambil daftar item dari database (lewat relasi)
+                        $lines = $pesanan->items;
 
                         $subtotalPerDay = $lines->sum(function ($item) {
-                            return $item->subtotal ?? $item->harga * $item->jumlah;
+                            return $item->subtotal ?? ($item->harga * $item->jumlah);
                         });
 
                         $total = $subtotalPerDay * max(1, $pesanan->hari);
@@ -276,23 +282,23 @@
                     {{-- Loop item --}}
                     @forelse ($lines as $item)
                         @php
-                            $perDay = $item->subtotal ?? $item->harga * $item->jumlah;
+                            $perDay = $item->subtotal ?? ($item->harga * $item->jumlah);
                             $lineTotal = $perDay * $pesanan->hari;
                         @endphp
 
                         <tr>
                             <td>{{ $item->nama_alat }}</td>
                             <td>Rp {{ number_format($item->harga, 0, ',', '.') }}</td>
-                            <td>{{ $item->jumlah }}</td>
-                            <td>Rp {{ number_format($perDay, 0, ',', '.') }}</td>
-                            <td>Rp {{ number_format($lineTotal, 0, ',', '.') }}</td>
+                            <td style="text-align: center;">{{ $item->jumlah }}</td>
+                            <td style="text-align: right;">Rp {{ number_format($perDay, 0, ',', '.') }}</td>
+                            <td style="text-align: right;">Rp {{ number_format($lineTotal, 0, ',', '.') }}</td>
                         </tr>
 
                     @empty
                         {{-- Jika tidak ada data item --}}
                         <tr>
-                            <td colspan="5" class="muted">
-                                Tidak ada item. Keranjang kosong atau data tidak ditemukan.
+                            <td colspan="5" class="muted text-center" style="text-align: center;">
+                                Tidak ada rincian barang.
                             </td>
                         </tr>
                     @endforelse
@@ -327,14 +333,11 @@
 
         {{-- Tombol aksi --}}
         <div class="actions">
-            <!-- tombol print: pakai button karena memanggil window.print() -->
             <button type="button" class="btn btn-print" onclick="window.print()">Print / Simpan PDF</button>
 
-            <!-- kembali: gunakan anchor bergaya tombol -->
             <a href="{{ route('User.dashboard') }}" class="btn btn-back" role="button">Kembali ke Beranda</a>
 
-            <!-- WhatsApp: anchor bergaya tombol -->
-            <a href="https://wa.me/6288232778958?text=Halo%20Admin%20Adventure!%20Saya%20ingin%20konfirmasi%20pesanan%20saya."
+            <a href="https://wa.me/6288232778958?text=Halo%20Admin%20Adventure!%20Saya%20ingin%20konfirmasi%20pesanan%20saya%20dengan%20ID%20Pesanan%20%23{{ $pesanan->id }}."
                 target="_blank" class="btn btn-whatsapp" style="text-decoration:none;">
                 💬 Chat WhatsApp
             </a>

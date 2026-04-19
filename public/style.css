@@ -670,6 +670,22 @@ nav a.active {
     cursor: pointer;
   }
 
+  .cart-icon-link {
+    position: relative;
+    font-size: 24px;
+  }
+
+  .cart-badge{
+    position: absolute;
+    top: -8px;
+    right: -10px;
+    background: red;
+    color: white;
+    font-size: 12px;
+    padding: 3px 7px;
+    border-radius: 50%;
+  }
+
   /* Grid produk */
   .produk-grid {
     display: grid;

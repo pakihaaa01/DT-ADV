@@ -94,9 +94,9 @@ class CheckoutController extends Controller
             $subtotal = $cart->sum(fn($i) => $i->harga * $i->jumlah);
             $total = $subtotal * max(1, $pesanan->hari);
 
-            // Simpan pembayaran
+            // Simpan pembayaran (Bisa untuk Guest/belum login)
             $pembayaran = Pembayaran::create([
-                'user_id' => Auth::id(),
+                'user_id' => Auth::id() ?? null, // FIXED: Cegah error jika user belum login
                 'pesanan_id' => $pesanan->id,
                 'jumlah' => $total,
                 'metode_pembayaran' => $request->metode_pembayaran,
@@ -112,7 +112,7 @@ class CheckoutController extends Controller
 
             // Simpan item pesanan
             $items = $cart->map(fn($c) => [
-                'product_id' => $c->tipe_alat_id,
+                'product_id' => $c->tipe_alat_id, // 👉 Pastikan ini bernama product_id
                 'nama_alat' => $c->nama_alat,
                 'jumlah' => $c->jumlah,
                 'harga' => $c->harga,
@@ -124,9 +124,8 @@ class CheckoutController extends Controller
             // Hapus keranjang
             Keranjang::where('session_id', $sessionId)->delete();
 
-            // Update status
+            // Update status pesanan
             $pesanan->update([
-                'metode_pembayaran' => $request->metode_pembayaran,
                 'status' => $request->metode_pembayaran === 'Cash'
                     ? 'Menunggu Pengambilan'
                     : 'Menunggu Verifikasi'
@@ -136,27 +135,63 @@ class CheckoutController extends Controller
 
             DB::commit();
 
-            // 🔥 INI YANG PENTING
+            // Redirect ke halaman detail pesanan
             return redirect()->route('admin.detailpesanan', $pesanan->id);
 
         } catch (\Throwable $e) {
             DB::rollBack();
             Log::error($e->getMessage());
 
-            return back()->with('error', 'Gagal membuat pesanan');
+            // 🔥 FIXED: Memunculkan pesan error asli ke layar agar ketahuan masalahnya
+            return back()->with('error', 'Sistem Error: ' . $e->getMessage());
         }
     }
 
     // =========================
     // 4. DETAIL PESANAN
     // =========================
-    public function detail($id): View
+    public function detail($id)
     {
-        $pesanan = Pesanan::with(['items', 'pembayaran'])->findOrFail($id);
+        $pesanan = \App\Models\Pesanan::with(['items', 'pembayaran'])->findOrFail($id);
 
-        $subtotal = $pesanan->items->sum('subtotal');
-        $total = $subtotal * max(1, $pesanan->hari);
+        // Deteksi SUPER AKURAT dari URL: 
+        // Jika URL berawalan 'adminn', berikan file tampilan untuk Admin
+        if (request()->is('adminn/*')) {
+            return view('adminn.detailpesanan_admin', compact('pesanan'));
+        }
 
-        return view('Admin.detailpesanan', compact('pesanan', 'total'));
+        // Jika tidak (URL publik), berikan file tampilan untuk User
+        return view('Admin.detailpesanan_user', compact('pesanan'));
+    }
+
+    // =========================
+    // 5. VERIFIKASI PEMBAYARAN
+    // =========================
+    public function verifikasi(Request $request, $id)
+    {
+        $request->validate([
+            'aksi' => 'required|in:Setujui,Tolak'
+        ]);
+
+        $pesanan = Pesanan::findOrFail($id);
+        $pembayaran = $pesanan->pembayaran;
+
+        if ($request->aksi === 'Setujui') {
+            // Jika disetujui, pesanan siap diambil, pembayaran lunas
+            $pesanan->update(['status' => 'Menunggu Pengambilan']);
+            if ($pembayaran) {
+                $pembayaran->update(['status' => 'Lunas']);
+            }
+            $pesan = 'Pembayaran berhasil diverifikasi. Pesanan siap diambil!';
+        } else {
+            // Jika ditolak, pesanan dibatalkan
+            $pesanan->update(['status' => 'Dibatalkan']);
+            if ($pembayaran) {
+                $pembayaran->update(['status' => 'Ditolak']);
+            }
+            $pesan = 'Pembayaran ditolak. Pesanan dibatalkan.';
+        }
+
+        return back()->with('success', $pesan);
     }
 }

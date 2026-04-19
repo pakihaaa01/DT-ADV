@@ -5,30 +5,24 @@
 @section('content')
     <div class="container py-5">
 
-        <!-- Judul utama halaman -->
-        <h2 class="fw-bold mb-4 text-center">Manajemen Alat Camping</h2>
+        <h2 class="fw-bold mb-4 text-center">Manajemen Alat Camping & Pesanan</h2>
 
-        <!-- Tombol kembali ke dashboard -->
         <div class="mb-3 text-end">
             <a href="{{ route('User.dashboard') }}" class="btn btn-outline-primary">
-                <i class="bi bi-telephone"></i>Ke Menu Dashboard
+                <i class="bi bi-house"></i> Ke Halaman Utama (Publik)
             </a>
         </div>
 
-        <!-- Menampilkan pesan sukses jika data berhasil disimpan / diupdate -->
         @if (session('success'))
             <div class="alert alert-success text-center">{{ session('success') }}</div>
         @endif
 
-        <!-- Menampilkan pesan kesalahan jika ada input yang salah -->
         @if ($errors->any())
             <div class="alert alert-danger text-center">
                 <strong>{{ $errors->first() }}</strong>
             </div>
         @endif
 
-        <!-- FORM TAMBAH ALAT BARU -->
-        <!-- Bagian ini untuk admin menambah alat camping baru -->
         <div class="card mb-5 border-0 shadow">
             <div class="card-header bg-primary text-white">
                 <h5 class="mb-0">Tambah Alat Baru</h5>
@@ -37,15 +31,12 @@
             <div class="card-body">
                 <form action="{{ route('adminn.barang.store') }}" method="POST" enctype="multipart/form-data">
                     @csrf
-
-                    <!-- Pilih kategori dan isi nama alat -->
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-semibold">Kategori</label>
                             <select name="kategori_id" class="form-select" required>
                                 <option value="">-- Pilih Kategori --</option>
                                 @foreach ($kategori as $kat)
-                                    <!-- Menampilkan daftar kategori dari database -->
                                     <option value="{{ $kat->id }}">{{ $kat->nama_kategori }}</option>
                                 @endforeach
                             </select>
@@ -53,12 +44,10 @@
 
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-semibold">Nama Alat</label>
-                            <input type="text" name="nama_alat" class="form-control" required
-                                placeholder="Contoh: Sleeping Bag">
+                            <input type="text" name="nama_alat" class="form-control" required placeholder="Contoh: Sleeping Bag">
                         </div>
                     </div>
 
-                    <!-- Input stok, harga sewa, dan gambar -->
                     <div class="row">
                         <div class="col-md-4 mb-3">
                             <label class="form-label fw-semibold">Stok</label>
@@ -72,27 +61,24 @@
 
                         <div class="col-md-4 mb-3">
                             <label class="form-label fw-semibold">Gambar</label>
-                            <!-- Gambar tidak wajib, boleh dikosongkan -->
                             <input type="file" name="gambar" class="form-control" accept="image/*">
                         </div>
                     </div>
 
-                    <!-- Input deskripsi alat -->
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Deskripsi</label>
                         <textarea name="deskripsi" class="form-control" rows="3" placeholder="Tuliskan deskripsi alat..."></textarea>
                     </div>
 
-                    <!-- Tombol untuk menyimpan alat baru -->
                     <button type="submit" class="btn btn-success w-100 fw-semibold">+ Tambah Alat</button>
                 </form>
             </div>
         </div>
 
-        <!-- TABEL DAFTAR ALAT YANG SUDAH ADA -->
-        <div class="card border-0 shadow">
+
+        <div class="card mb-5 border-0 shadow">
             <div class="card-header bg-dark text-white">
-                <h5 class="mb-0">Daftar Alat Camping</h5>
+                <h5 class="mb-0">Daftar Alat Camping (Inventaris)</h5>
             </div>
 
             <div class="card-body">
@@ -111,149 +97,192 @@
                                     <th>Aksi</th>
                                 </tr>
                             </thead>
-
                             <tbody>
                                 @foreach ($items as $index => $item)
                                     <tr>
-                                        <!-- Nomor urut -->
                                         <td>{{ $index + 1 }}</td>
-
-                                        <!-- Menampilkan gambar alat -->
                                         <td>
                                             @if ($item->gambar)
-                                                <img src="{{ asset('storage/' . $item->gambar) }}" width="80"
-                                                    class="rounded">
+                                                <img src="{{ asset('storage/' . $item->gambar) }}" width="80" class="rounded">
                                             @else
                                                 <small class="text-muted">Tidak ada</small>
                                             @endif
                                         </td>
-
-                                        <!-- Informasi alat -->
                                         <td>{{ $item->nama_alat }}</td>
                                         <td>{{ $item->kategori->nama_kategori ?? '-' }}</td>
                                         <td>{{ $item->stok }}</td>
                                         <td>Rp {{ number_format($item->harga, 0, ',', '.') }}</td>
-                                        <td>{{ $item->deskripsi }}</td>
-
-                                        <!-- Tombol untuk edit & hapus -->
+                                        <td>{{ Str::limit($item->deskripsi, 50) }}</td>
                                         <td>
-                                            <!-- Tombol edit (menampilkan modal) -->
-                                            <button type="button" class="btn btn-warning btn-sm mb-1"
-                                                data-bs-toggle="modal" data-bs-target="#editModal{{ $item->id }}">
-                                                Edit
-                                            </button>
-
-                                            <!-- Tombol hapus (dengan konfirmasi sebelum menghapus) -->
-                                            <form action="{{ route('adminn.barang.destroy', $item->id) }}" method="POST"
-                                                onsubmit="return confirm('Yakin hapus item ini?')" class="d-inline">
+                                            <button type="button" class="btn btn-warning btn-sm mb-1" data-bs-toggle="modal" data-bs-target="#editModal{{ $item->id }}">Edit</button>
+                                            <form action="{{ route('adminn.barang.destroy', $item->id) }}" method="POST" onsubmit="return confirm('Yakin hapus item ini?')" class="d-inline">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button class="btn btn-danger btn-sm">Hapus</button>
+                                                <button class="btn btn-danger btn-sm mb-1">Hapus</button>
                                             </form>
                                         </td>
                                     </tr>
 
-                                    <!-- MODAL EDIT DATA ALAT -->
-                                    <div class="modal fade" id="editModal{{ $item->id }}" tabindex="-1"
-                                        aria-labelledby="editModalLabel{{ $item->id }}" aria-hidden="true">
+                                    <div class="modal fade" id="editModal{{ $item->id }}" tabindex="-1" aria-hidden="true">
                                         <div class="modal-dialog modal-lg">
                                             <div class="modal-content">
-
-                                                <form action="{{ route('adminn.barang.update', $item->id) }}"
-                                                    method="POST" enctype="multipart/form-data">
+                                                <form action="{{ route('adminn.barang.update', $item->id) }}" method="POST" enctype="multipart/form-data">
                                                     @csrf
                                                     @method('PUT')
-
-                                                    <!-- Judul modal -->
                                                     <div class="modal-header">
-                                                        <h5 class="modal-title">
-                                                            Edit: {{ $item->nama_alat }}
-                                                        </h5>
-
-                                                        <button type="button" class="btn-close"
-                                                            data-bs-dismiss="modal"></button>
+                                                        <h5 class="modal-title">Edit: {{ $item->nama_alat }}</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                                     </div>
-
-                                                    <!-- Isi form edit -->
                                                     <div class="modal-body">
-                                                        <!-- Edit kategori dan nama -->
-                                                        <div class="row">
+                                                        <div class="row text-start">
                                                             <div class="col-md-6 mb-3">
                                                                 <label class="form-label">Kategori</label>
                                                                 <select name="kategori_id" class="form-select" required>
                                                                     @foreach ($kategori as $kat)
-                                                                        <option value="{{ $kat->id }}"
-                                                                            {{ $kat->id == $item->kategori_id ? 'selected' : '' }}>
-                                                                            {{ $kat->nama_kategori }}
-                                                                        </option>
+                                                                        <option value="{{ $kat->id }}" {{ $kat->id == $item->kategori_id ? 'selected' : '' }}>{{ $kat->nama_kategori }}</option>
                                                                     @endforeach
                                                                 </select>
                                                             </div>
-
                                                             <div class="col-md-6 mb-3">
                                                                 <label class="form-label">Nama Alat</label>
-                                                                <input type="text" name="nama_alat"
-                                                                    class="form-control" value="{{ $item->nama_alat }}"
-                                                                    required>
+                                                                <input type="text" name="nama_alat" class="form-control" value="{{ $item->nama_alat }}" required>
                                                             </div>
                                                         </div>
-
-                                                        <!-- Edit stok, harga, gambar -->
-                                                        <div class="row">
+                                                        <div class="row text-start">
                                                             <div class="col-md-4 mb-3">
                                                                 <label class="form-label">Stok</label>
-                                                                <input type="number" name="stok" class="form-control"
-                                                                    value="{{ $item->stok }}" min="0" required>
+                                                                <input type="number" name="stok" class="form-control" value="{{ $item->stok }}" min="0" required>
                                                             </div>
-
                                                             <div class="col-md-4 mb-3">
                                                                 <label class="form-label">Harga Sewa (Rp)</label>
-                                                                <input type="number" name="harga"
-                                                                    class="form-control" value="{{ $item->harga }}"
-                                                                    min="0" required>
+                                                                <input type="number" name="harga" class="form-control" value="{{ $item->harga }}" min="0" required>
                                                             </div>
-
                                                             <div class="col-md-4 mb-3">
-                                                                <label class="form-label">Gambar (opsional)</label>
-                                                                <input type="file" name="gambar"
-                                                                    class="form-control">
-
-                                                                <!-- Menampilkan gambar lama -->
+                                                                <label class="form-label">Gambar Baru (opsional)</label>
+                                                                <input type="file" name="gambar" class="form-control">
                                                                 @if ($item->gambar)
-                                                                    <img src="{{ asset('storage/' . $item->gambar) }}"
-                                                                        width="100" class="mt-2 rounded">
+                                                                    <img src="{{ asset('storage/' . $item->gambar) }}" width="80" class="mt-2 rounded">
                                                                 @endif
                                                             </div>
                                                         </div>
-
-                                                        <!-- Edit deskripsi -->
-                                                        <div class="mb-3">
+                                                        <div class="mb-3 text-start">
                                                             <label class="form-label">Deskripsi</label>
                                                             <textarea name="deskripsi" class="form-control" rows="3">{{ $item->deskripsi }}</textarea>
                                                         </div>
                                                     </div>
-
-                                                    <!-- Tombol simpan perubahan -->
                                                     <div class="modal-footer">
-                                                        <button type="submit" class="btn btn-primary">Simpan
-                                                            Perubahan</button>
+                                                        <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
                                                     </div>
-
                                                 </form>
-
                                             </div>
                                         </div>
                                     </div>
-                                    <!-- END MODAL EDIT -->
                                 @endforeach
                             </tbody>
                         </table>
                     </div>
                 @else
-                    <!-- Jika tidak ada alat -->
                     <p class="text-muted text-center">Belum ada alat camping yang ditambahkan.</p>
                 @endif
             </div>
         </div>
+
+
+        <div class="card border-0 shadow mt-5 mb-5">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Daftar Pesanan Masuk (Live)</h5>
+                <button class="btn btn-sm btn-light text-success fw-bold" onclick="loadDataPesanan()">
+                    🔄 Refresh Data
+                </button>
+            </div>
+
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table-bordered table text-center align-middle">
+                        <thead class="table-success">
+                            <tr>
+                                <th>ID Pesanan</th>
+                                <th>Tgl Mulai Sewa</th>
+                                <th>Total Tagihan</th>
+                                <th>Status</th>
+                                <th>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabel-pesanan">
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">Memuat data pesanan...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
     </div>
+
+    <script>
+        function loadDataPesanan() {
+            const tbody = document.getElementById('tabel-pesanan');
+            
+            // Tampilkan tulisan loading sementara data ditarik
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Mengambil data terbaru...</td></tr>';
+
+            // ✅ URL SUDAH DIPERBAIKI SESUAI WEB.PHP
+            fetch('/admin-data-pesanan-ajax', {
+                headers: {
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error("Gagal menarik data");
+                return response.json();
+            })
+            .then(data => {
+                tbody.innerHTML = ''; // Bersihkan tabel
+
+                if(data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center">Belum ada pesanan yang masuk.</td></tr>';
+                    return;
+                }
+
+                // Looping dan masukkan data ke dalam baris tabel
+                data.forEach(order => {
+                    // Format ke Rupiah
+                    let totalTagihan = order.pembayaran ? order.pembayaran.jumlah : 0;
+                    let totalRupiah = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalTagihan);
+
+                    // Warna Badge sesuai status
+                    let statusBadge = 'bg-warning text-dark'; // Default Pending
+                    if(order.status === 'Selesai' || order.status === 'Lunas' || order.status === 'Disetujui') {
+                        statusBadge = 'bg-success';
+                    } else if(order.status === 'Dibatalkan' || order.status === 'Ditolak') {
+                        statusBadge = 'bg-danger';
+                    }
+
+                    // Buat elemen <tr> baru
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>#${order.id}</strong></td>
+                        <td>${order.tanggal_mulai || '-'}</td>
+                        <td class="text-success fw-bold">${totalRupiah}</td>
+                        <td><span class="badge ${statusBadge}">${order.status || 'Pending'}</span></td>
+                        <td>
+                            <a href="/adminn/detailpesanan/${order.id}" class="btn btn-sm btn-info text-white">
+                                Lihat Detail
+                            </a>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            })
+            .catch(error => {
+                console.error("Gagal memuat pesanan:", error);
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Gagal terhubung ke database pesanan. Pastikan Route API sudah dibuat di web.php.</td></tr>';
+            });
+        }
+
+        // Jalankan fungsi otomatis saat halaman selesai dimuat
+        document.addEventListener('DOMContentLoaded', loadDataPesanan);
+        
+    </script>
 @endsection

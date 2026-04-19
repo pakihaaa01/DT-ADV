@@ -7,6 +7,7 @@ use App\Http\Controllers\ManajemenAlatController;
 use App\Models\KategoriAlat;
 use App\Models\TipeAlat;
 use Illuminate\Support\Facades\Route;
+use App\Models\Keranjang;
 
 /*
 |--------------------------------------------------------------------------
@@ -65,6 +66,13 @@ Route::get('/admin/kategori_outfitoutdoor', function () {
 Route::get('/admin/isidata', function () {
     return view('Admin.isidata');
 })->name('admin.isidata');
+
+Route::get('/cart/count', function (\Illuminate\Http\Request $request) {
+    $sessionId = $request->session()->getId();
+    $count = \App\Models\Keranjang::where('session_id', $sessionId)->sum('jumlah');
+    
+    return response()->json(['count' => $count]);
+});
 
 // --------------------------------------------------
 // KATEGORI SPESIFIK (public)
@@ -184,6 +192,9 @@ Route::get('/admin/kategori_perlengkapantambahan', function () {
     return view('Admin.kategori_perlengkapantambahan', compact('items', 'kategori'));
 })->name('admin.kategori_perlengkapantambahan');
 
+// Route untuk tombol verifikasi pembayaran
+Route::post('/admin/pesanan/{id}/verifikasi', [CheckoutController::class, 'verifikasi'])->name('admin.pesanan.verifikasi');
+
 /*
 |--------------------------------------------------------------------------
 | KERANJANG & CHECKOUT (publik / user)
@@ -199,6 +210,8 @@ Route::post('/admin/order', [CheckoutController::class, 'placeOrder'])->name('ad
 
 Route::get('/pesanan/{id}', [CheckoutController::class, 'detail'])->name('pesanan.detail');
 
+// Route untuk mengubah jumlah barang di keranjang
+Route::patch('/keranjang/update/{id}', [KeranjangController::class, 'updateQty'])->name('keranjang.updateQty');
 // DETAIL PESANAN — PUBLIC (sesuai permintaan)
 Route::get('/admin/detailpesanan/{id}', [CheckoutController::class, 'detail'])
     ->name('admin.detailpesanan');
@@ -226,6 +239,8 @@ Route::middleware('auth:admin')->group(function () {
     Route::post('/adminn/barang', [ManajemenAlatController::class, 'store'])->name('adminn.barang.store');
     Route::put('/adminn/barang/{id}', [ManajemenAlatController::class, 'update'])->name('adminn.barang.update');
     Route::delete('/adminn/barang/{id}', [ManajemenAlatController::class, 'destroy'])->name('adminn.barang.destroy');
+    // detail pesanan di dashboard admin
+    Route::get('/adminn/detailpesanan/{id}', [CheckoutController::class, 'detail'])->name('adminn.detailpesanan.khusus');
 
     // Detail pesanan admin-only jika kalian ingin proteksi (opsional)
     // Route::get('/admin/detailpesanan/{id}', [CheckoutController::class, 'detail'])
@@ -241,4 +256,15 @@ Route::middleware('auth:admin')->group(function () {
 Route::get('/api/produk', function () {
     $produk = TipeAlat::all();
     return response()->json($produk);
+});
+
+// Route khusus AJAX untuk ambil data pesanan
+Route::get('/admin-data-pesanan-ajax', function () {
+    try {
+        // 👉 FIXED: Tambahkan with('pembayaran') agar data tagihan ikut terbawa
+        $pesanan = \App\Models\Pesanan::with('pembayaran')->latest()->get();
+        return response()->json($pesanan);
+    } catch (\Exception $e) {
+        return response()->json(['error' => $e->getMessage()], 500);
+    }
 });
