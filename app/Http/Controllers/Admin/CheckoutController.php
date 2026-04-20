@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Keranjang;
 use App\Models\Pembayaran;
 use App\Models\Pesanan;
+use App\Models\TipeAlat; // [FITUR BARU] Import model TipeAlat
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
@@ -90,6 +91,14 @@ class CheckoutController extends Controller
         DB::beginTransaction();
 
         try {
+            // [FITUR BARU] Cek ulang stok sebelum memproses transaksi (Mencegah Race Condition)
+            foreach ($cart as $item) {
+                $alat = TipeAlat::find($item->tipe_alat_id);
+                if (!$alat || $alat->stok < $item->jumlah) {
+                    throw new \Exception('Stok untuk alat "' . $item->nama_alat . '" tidak mencukupi atau sudah habis. Sisa stok: ' . ($alat ? $alat->stok : 0));
+                }
+            }
+
             // Hitung total
             $subtotal = $cart->sum(fn($i) => $i->harga * $i->jumlah);
             $total = $subtotal * max(1, $pesanan->hari);
@@ -120,6 +129,11 @@ class CheckoutController extends Controller
             ]);
 
             $pesanan->items()->createMany($items->toArray());
+
+            // [FITUR BARU] Kurangi stok barang di database
+            foreach ($cart as $item) {
+                TipeAlat::where('id', $item->tipe_alat_id)->decrement('stok', $item->jumlah);
+            }
 
             // Hapus keranjang
             Keranjang::where('session_id', $sessionId)->delete();
@@ -189,6 +203,12 @@ class CheckoutController extends Controller
             if ($pembayaran) {
                 $pembayaran->update(['status' => 'Ditolak']);
             }
+            // [OPSIONAL/TAMBAHAN] Jika ditolak, Anda mungkin ingin mengembalikan stok.
+            // Jika ingin mengembalikan stok saat ditolak, Anda bisa menambahkannya di sini.
+            // foreach ($pesanan->items as $item) {
+            //     TipeAlat::where('id', $item->product_id)->increment('stok', $item->jumlah);
+            // }
+
             $pesan = 'Pembayaran ditolak. Pesanan dibatalkan.';
         }
 

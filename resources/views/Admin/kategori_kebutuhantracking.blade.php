@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DT Adventure</title>
+    <title>DT Adventure - Kebutuhan Tracking</title>
     <link rel="stylesheet" href="{{ asset('style.css') }}">
 </head>
 
@@ -36,7 +36,7 @@
                 <p>Semua yang kamu butuhkan saat tracking ada disini, dari carrier hingga kacamata gunung.</p>
             </div>
 
-            {{-- IKON KERANJANG DINAMIS (LANGSUNG DARI DATABASE) --}}
+            {{-- IKON KERANJANG DINAMIS --}}
             <a href="{{ route('admin.keranjang') }}" class="cart-icon-link">🛒
                 @php
                     $sessionId = request()->session()->getId();
@@ -105,54 +105,8 @@
                 </div>
             </a>
 
-            {{-- Link Sepatu sudah diperbaiki rutenya --}}
-            <a href="{{ route('admin.kategori_sepatuhiking') }}" class="card-link">
-                <div class="product-card">
-                    <img src="{{ asset('sepatu.jpg') }}" alt="sepatu">
-                    <p>Sepatu</p>
-                </div>
-            </a>
-
-        </div>
+            </div>
     </section>
-
-    {{-- JAVASCRIPT AJAX --}}
-    <script>
-    function tambahKeranjang(id) {
-        fetch(`/tambah-ke-keranjang/${id}`, { 
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            }
-        })
-        .then(res => {
-            if (!res.ok) throw new Error("Gagal request ke server");
-            return res.json();
-        })
-        .then(data => {
-            if(data.success) {
-                updateCartBadge();
-                alert("Produk berhasil ditambahkan ke keranjang!");
-            }
-        })
-        .catch(err => {
-            console.error("Terjadi kesalahan:", err);
-            alert("Gagal menambahkan ke keranjang.");
-        });
-    }
-
-    function updateCartBadge() {
-        fetch('/cart/count')
-        .then(res => res.json())
-        .then(data => {
-            const badge = document.querySelector('.cart-badge');
-            if (badge) badge.innerText = data.count;
-        })
-        .catch(err => console.error("Gagal update badge:", err));
-    }
-    </script>
 
 </body>
 </html>

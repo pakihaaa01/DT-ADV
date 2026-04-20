@@ -4,26 +4,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    {{-- Judul halaman di tab browser --}}
-    <title>DT Adventure</title>
-
-    {{-- Memuat file CSS utama --}}
+    <title>DT Adventure - Katalog Alat</title>
     <link rel="stylesheet" href="{{ asset('style.css') }}">
 </head>
 
 <body>
 
-    {{-- HEADER: logo & navigasi --}}
+    {{-- HEADER --}}
     <header>
         <div class="header-container">
-
-            {{-- Logo situs --}}
             <div class="logo-container">
                 <img src="{{ asset('logo.png') }}" alt="DT Adventure Logo" class="logo">
             </div>
-
-            {{-- Navigasi utama --}}
             <nav>
                 <a href="{{ route('User.dashboard') }}">BERANDA</a>
                 <a href="{{ route('admin.pricelist') }}">PRICELIST</a>
@@ -34,74 +26,64 @@
         </div>
     </header>
 
-    {{-- Notifikasi sukses setelah tambah ke keranjang --}}
-    @if (session('success'))
-        <div class="alert-success">
-            {{ session('success') }}
-        </div>
-    @endif
-
-    {{-- SECTION: daftar produk kategori tenda & alat tidur --}}
+    {{-- SECTION PRODUK --}}
     <section class="produk-container">
 
-        {{-- Header kategori --}}
         <div class="produk-header">
             <div>
                 <h2>Tenda dan Alat Tidur</h2>
                 <p>Istirahat seru di tengah alam dengan pilihan tenda dan alat tidur terbaik.</p>
             </div>
 
-            {{-- Ikon menuju halaman keranjang --}}
+            {{-- IKON KERANJANG DINAMIS --}}
             <a href="{{ route('admin.keranjang') }}" class="cart-icon-link">🛒
-                <span class="cart-badge">0</span>
+                @php
+                    $sessionId = request()->session()->getId();
+                    $cartCount = \App\Models\Keranjang::where('session_id', $sessionId)->sum('jumlah');
+                @endphp
+                <span class="cart-badge">{{ $cartCount }}</span>
             </a>
         </div>
 
-        {{-- Grid produk --}}
+        {{-- GRID PRODUK --}}
         <div class="produk-grid">
-
-            {{-- Loop setiap item dalam kategori --}}
             @forelse($items as $item)
                 <div class="produk-card">
-
-                    {{-- Gambar item diambil dari storage --}}
                     <img src="{{ asset('storage/' . $item->gambar) }}" alt="{{ $item->nama_alat }}" width="100">
-
                     <div class="produk-info">
-
-                        {{-- Nama alat --}}
                         <h3>{{ $item->nama_alat }}</h3>
-
-                        {{-- Deskripsi alat --}}
                         <p>{{ $item->deskripsi }}</p>
-
-                        {{-- Harga sewa / hari --}}
+                        <div class="stok-info">
+                            <small>Sisa Stok: <strong>{{ $item->stok }}</strong></small>
+                        </div>
                         <div class="harga">
                             Rp {{ number_format($item->harga, 0, ',', '.') }} / hari
                         </div>
 
-                        {{-- Tombol tambah ke keranjang --}}
-                        <button
-                        class="tambah-btn"
-                        onclick="tambahKeranjang({{ $item->id }})"
-                        >
-                        Tambah </button>
-
+                        {{-- LOGIKA TOMBOL BERDASARKAN STOK --}}
+                        @if($item->stok > 0)
+                            <button class="tambah-btn" onclick="tambahKeranjang({{ $item->id }})">
+                                Tambah
+                            </button>
+                        @else
+                            <button class="tambah-btn btn-habis" disabled style="background-color: #ccc; cursor: not-allowed;">
+                                Stok Habis
+                            </button>
+                        @endif
                     </div>
                 </div>
-
-                {{-- Jika tidak ada item --}}
             @empty
-                <p class="text-center">Belum ada alat pada kategori ini.</p>
+                <p class="text-center" style="grid-column: 1 / -1; margin-top: 20px;">
+                    Belum ada alat pada kategori ini.
+                </p>
             @endforelse
-
         </div>
 
     </section>
 
+    {{-- JAVASCRIPT AJAX --}}
     <script>
     function tambahKeranjang(id) {
-        // Ganti URL-nya ditambahin "-ke-" agar sesuai dengan web.php
         fetch(`/tambah-ke-keranjang/${id}`, { 
             method: 'POST',
             headers: {
@@ -110,21 +92,24 @@
                 'Accept': 'application/json'
             }
         })
-        .then(res => {
-            if (!res.ok) {
-                throw new Error("Gagal request ke server");
+        .then(async res => {
+            const data = await res.json();
+            
+            // Jika server mengirimkan error (stok habis/melebihi batas)
+            if (!res.ok || !data.success) {
+                throw new Error(data.message || "Gagal menambahkan ke keranjang.");
             }
-            return res.json();
+            return data;
         })
         .then(data => {
             if(data.success) {
                 updateCartBadge();
-                alert("Produk berhasil ditambahkan ke keranjang!");
+                alert(data.message); // Menampilkan pesan sukses dari Controller
             }
         })
         .catch(err => {
             console.error("Terjadi kesalahan:", err);
-            alert("Gagal menambahkan ke keranjang.");
+            alert(err.message); // Menampilkan pesan error dari Controller (misal: "Stok habis")
         });
     }
 
@@ -133,16 +118,11 @@
         .then(res => res.json())
         .then(data => {
             const badge = document.querySelector('.cart-badge');
-            if (badge) {
-                badge.innerText = data.count;
-            }
+            if (badge) badge.innerText = data.count;
         })
         .catch(err => console.error("Gagal update badge:", err));
     }
-</script>
-
-
+    </script>
 
 </body>
-
 </html>

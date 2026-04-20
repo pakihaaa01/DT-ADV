@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DT Adventure - Jaket Gorpcore</title>
+    <title>DT Adventure - Katalog Alat</title>
     <link rel="stylesheet" href="{{ asset('style.css') }}">
 </head>
 
@@ -31,9 +31,8 @@
 
         <div class="produk-header">
             <div>
-                {{-- Header --}}
                 <h2>Jaket Gorpcore</h2>
-                <p>Tampil stylish dan terlindungi dari cuaca ekstrem dengan koleksi Jaket Gorpcore kami.</p>
+                <p>Tampil stylish dan terlindungi dari cuaca extrem dengan koleksi jaket gorpcore kami.</p>
             </div>
 
             {{-- IKON KERANJANG DINAMIS --}}
@@ -54,10 +53,23 @@
                     <div class="produk-info">
                         <h3>{{ $item->nama_alat }}</h3>
                         <p>{{ $item->deskripsi }}</p>
+                        <div class="stok-info">
+                            <small>Sisa Stok: <strong>{{ $item->stok }}</strong></small>
+                        </div>
                         <div class="harga">
                             Rp {{ number_format($item->harga, 0, ',', '.') }} / hari
                         </div>
-                        <button class="tambah-btn" onclick="tambahKeranjang({{ $item->id }})">Tambah</button>
+
+                        {{-- LOGIKA TOMBOL BERDASARKAN STOK --}}
+                        @if($item->stok > 0)
+                            <button class="tambah-btn" onclick="tambahKeranjang({{ $item->id }})">
+                                Tambah
+                            </button>
+                        @else
+                            <button class="tambah-btn btn-habis" disabled style="background-color: #ccc; cursor: not-allowed;">
+                                Stok Habis
+                            </button>
+                        @endif
                     </div>
                 </div>
             @empty
@@ -80,19 +92,24 @@
                 'Accept': 'application/json'
             }
         })
-        .then(res => {
-            if (!res.ok) throw new Error("Gagal request ke server");
-            return res.json();
+        .then(async res => {
+            const data = await res.json();
+            
+            // Jika server mengirimkan error (stok habis/melebihi batas)
+            if (!res.ok || !data.success) {
+                throw new Error(data.message || "Gagal menambahkan ke keranjang.");
+            }
+            return data;
         })
         .then(data => {
             if(data.success) {
                 updateCartBadge();
-                alert("Produk berhasil ditambahkan ke keranjang!");
+                alert(data.message); // Menampilkan pesan sukses dari Controller
             }
         })
         .catch(err => {
             console.error("Terjadi kesalahan:", err);
-            alert("Gagal menambahkan ke keranjang.");
+            alert(err.message); // Menampilkan pesan error dari Controller (misal: "Stok habis")
         });
     }
 

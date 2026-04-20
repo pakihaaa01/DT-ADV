@@ -31,6 +31,7 @@
             <div class="card-body">
                 <form action="{{ route('adminn.barang.store') }}" method="POST" enctype="multipart/form-data">
                     @csrf
+                    
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-semibold">Kategori</label>
@@ -115,6 +116,7 @@
                                         <td>{{ Str::limit($item->deskripsi, 50) }}</td>
                                         <td>
                                             <button type="button" class="btn btn-warning btn-sm mb-1" data-bs-toggle="modal" data-bs-target="#editModal{{ $item->id }}">Edit</button>
+                                            
                                             <form action="{{ route('adminn.barang.destroy', $item->id) }}" method="POST" onsubmit="return confirm('Yakin hapus item ini?')" class="d-inline">
                                                 @csrf
                                                 @method('DELETE')
@@ -187,7 +189,6 @@
             </div>
         </div>
 
-
         <div class="card border-0 shadow mt-5 mb-5">
             <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                 <h5 class="mb-0">Daftar Pesanan Masuk (Live)</h5>
@@ -224,13 +225,13 @@
         function loadDataPesanan() {
             const tbody = document.getElementById('tabel-pesanan');
             
-            // Tampilkan tulisan loading sementara data ditarik
             tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Mengambil data terbaru...</td></tr>';
 
-            // ✅ URL SUDAH DIPERBAIKI SESUAI WEB.PHP
             fetch('/admin-data-pesanan-ajax', {
                 headers: {
-                    'Accept': 'application/json'
+                    'Accept': 'application/json',
+                    // Optional: You can inject CSRF here if needed for POST later, but GET is fine without it.
+                    'X-Requested-With': 'XMLHttpRequest' 
                 }
             })
             .then(response => {
@@ -238,28 +239,24 @@
                 return response.json();
             })
             .then(data => {
-                tbody.innerHTML = ''; // Bersihkan tabel
+                tbody.innerHTML = ''; 
 
                 if(data.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="5" class="text-center">Belum ada pesanan yang masuk.</td></tr>';
                     return;
                 }
 
-                // Looping dan masukkan data ke dalam baris tabel
                 data.forEach(order => {
-                    // Format ke Rupiah
                     let totalTagihan = order.pembayaran ? order.pembayaran.jumlah : 0;
                     let totalRupiah = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalTagihan);
 
-                    // Warna Badge sesuai status
-                    let statusBadge = 'bg-warning text-dark'; // Default Pending
+                    let statusBadge = 'bg-warning text-dark'; 
                     if(order.status === 'Selesai' || order.status === 'Lunas' || order.status === 'Disetujui') {
                         statusBadge = 'bg-success';
                     } else if(order.status === 'Dibatalkan' || order.status === 'Ditolak') {
                         statusBadge = 'bg-danger';
                     }
 
-                    // Buat elemen <tr> baru
                     const tr = document.createElement('tr');
                     tr.innerHTML = `
                         <td><strong>#${order.id}</strong></td>
@@ -281,7 +278,6 @@
             });
         }
 
-        // Jalankan fungsi otomatis saat halaman selesai dimuat
         document.addEventListener('DOMContentLoaded', loadDataPesanan);
         
     </script>
