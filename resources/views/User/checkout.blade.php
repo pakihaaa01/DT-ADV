@@ -88,7 +88,6 @@
         <div class="cart-footer"
             style="margin-top: 20px; background: rgba(255,255,255,0.03); padding: 18px; border-radius: 12px;">
             
-            {{-- 🔥 PERBAIKAN: Posisi enctype sudah dimasukkan ke dalam tag form dengan benar --}}
             <form action="{{ route('admin.order.store') }}" method="POST" enctype="multipart/form-data"
                 style="display:flex; flex-direction:column; gap:14px;">
                 @csrf
@@ -100,8 +99,7 @@
 
                 {{-- Pilih metode pembayaran --}}
                 <div style="background: rgba(255,255,255,0.02); padding:12px; border-radius:8px;">
-                    <strong style="display:block; margin-bottom:8px; color:#FFD700; text-align:center;">Metode
-                        Pembayaran</strong>
+                    <strong style="display:block; margin-bottom:8px; color:#FFD700; text-align:center;">Metode Pembayaran</strong>
 
                     {{-- Radio Cash --}}
                     <label
@@ -125,15 +123,14 @@
                     <div id="qrisImageContainer" style="display:none; text-align:center; margin-top:12px;">
                         <img src="{{ asset('DT ADVENTURE.png') }}" alt="QRIS Code"
                             style="width:280px; border-radius:12px; box-shadow:0 6px 18px rgba(0,0,0,0.12);">
-                        <p style="color:#ccc; margin-top:8px; font-size:0.95rem;">Scan kode di atas untuk melakukan
-                            pembayaran melalui QRIS.</p>
+                        <p style="color:#ccc; margin-top:8px; font-size:0.95rem;">Scan kode di atas untuk melakukan pembayaran melalui QRIS.</p>
                     </div>
 
                     {{-- Wrapper upload bukti (tampil saat QRIS dipilih) --}}
                     <div id="buktiWrapper" style="display:none; margin-top:12px;">
-                        <label style="display:block; color:#eee; margin-bottom:6px;">Unggah Bukti Pembayaran
-                            (QRIS)</label>
-                        <input type="file" name="bukti" accept="image/*" style="color: white;"/>
+                        <label style="display:block; color:#eee; margin-bottom:6px;">Unggah Bukti Pembayaran (QRIS) <span style="color:#ff4d4d;">*</span></label>
+                        {{-- ✅ PERBAIKAN: Menambahkan ID pada input file agar mudah dikontrol oleh JS --}}
+                        <input type="file" name="bukti" id="input_bukti" accept="image/*" style="color: white; width: 100%;"/>
                         <div style="font-size:12px; color:#ccc; margin-top:6px;">Format: JPG/PNG. Max: 2MB.</div>
                     </div>
                 </div>
@@ -153,29 +150,38 @@
                 </div>
             </form>
 
-            {{-- JavaScript: toggle tampilan QR image & upload file --}}
+            {{-- JavaScript: toggle tampilan QR image & manipulasi atribut required --}}
             <script>
                 (function() {
                     const payQris = document.getElementById('payQris');
                     const payCash = document.getElementById('payCash');
                     const qrisImageContainer = document.getElementById('qrisImageContainer');
                     const buktiWrapper = document.getElementById('buktiWrapper');
+                    const inputBukti = document.getElementById('input_bukti');
 
-                    if (!payQris || !payCash) return;
+                    if (!payQris || !payCash || !inputBukti) return;
 
                     function updatePaymentUI() {
                         if (payQris.checked) {
+                            // Tampilkan area QRIS dan set upload file menjadi WAJIB (Required)
                             qrisImageContainer.style.display = 'block';
                             buktiWrapper.style.display = 'block';
+                            inputBukti.required = true;
                         } else {
+                            // Sembunyikan area QRIS dan set upload file menjadi TIDAK WAJIB
                             qrisImageContainer.style.display = 'none';
                             buktiWrapper.style.display = 'none';
+                            inputBukti.required = false;
+                            
+                            // Reset value (hapus gambar jika user sempat upload lalu pindah ke Cash)
+                            inputBukti.value = '';
                         }
                     }
 
                     payQris.addEventListener('change', updatePaymentUI);
                     payCash.addEventListener('change', updatePaymentUI);
 
+                    // Jalankan fungsi saat halaman pertama kali diload
                     updatePaymentUI();
                 })();
             </script>

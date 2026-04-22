@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Keranjang;
 use App\Models\Pembayaran;
 use App\Models\Pesanan;
-use App\Models\TipeAlat; // [FITUR BARU] Import model TipeAlat
+use App\Models\TipeAlat;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
@@ -19,7 +19,7 @@ use Illuminate\Support\Str;
 class CheckoutController extends Controller
 {
     // =========================
-    // 1. SIMPAN DATA PESANAN
+    // 1. SIMPAN DATA PESANAN AWAL
     // =========================
     public function store(Request $request): RedirectResponse
     {
@@ -68,14 +68,21 @@ class CheckoutController extends Controller
     }
 
     // =========================
-    // 3. PROSES PESANAN
+    // 3. PROSES PESANAN & PEMBAYARAN
     // =========================
     public function placeOrder(Request $request): RedirectResponse
     {
+        // ✅ [PERBAIKAN] Validasi wajib upload gambar HANYA jika milih QRIS
         $request->validate([
             'pesanan_id' => 'required|exists:pesanan,id',
             'metode_pembayaran' => 'required|in:Cash,QRIS',
-            'bukti' => 'nullable|image|max:2048',
+            'bukti' => 'required_if:metode_pembayaran,QRIS|image|mimes:jpeg,png,jpg,webp|max:2048',
+        ], [
+            // Pesan error kustom agar lebih mudah dimengerti user
+            'bukti.required_if' => 'Anda memilih QRIS. Silakan unggah bukti transfer terlebih dahulu!',
+            'bukti.image' => 'File bukti pembayaran harus berupa gambar.',
+            'bukti.mimes' => 'Format gambar harus jpeg, png, jpg, atau webp.',
+            'bukti.max' => 'Ukuran gambar maksimal 2MB.',
         ]);
 
         $pesanan = Pesanan::findOrFail($request->pesanan_id);
@@ -91,7 +98,7 @@ class CheckoutController extends Controller
         DB::beginTransaction();
 
         try {
-            // [FITUR BARU] Cek ulang stok sebelum memproses transaksi (Mencegah Race Condition)
+            // Cek ulang stok sebelum memproses transaksi (Mencegah Race Condition)
             foreach ($cart as $item) {
                 $alat = TipeAlat::find($item->tipe_alat_id);
                 if (!$alat || $alat->stok < $item->jumlah) {
@@ -103,9 +110,9 @@ class CheckoutController extends Controller
             $subtotal = $cart->sum(fn($i) => $i->harga * $i->jumlah);
             $total = $subtotal * max(1, $pesanan->hari);
 
-            // Simpan pembayaran (Bisa untuk Guest/belum login)
+            // Simpan pembayaran
             $pembayaran = Pembayaran::create([
-                'user_id' => Auth::id() ?? null, // FIXED: Cegah error jika user belum login
+                'user_id' => Auth::id() ?? null, 
                 'pesanan_id' => $pesanan->id,
                 'jumlah' => $total,
                 'metode_pembayaran' => $request->metode_pembayaran,
@@ -113,7 +120,7 @@ class CheckoutController extends Controller
                 'status' => 'pending',
             ]);
 
-            // Upload bukti
+            // Upload bukti (Akan selalu dijalankan jika metode QRIS karena sudah divalidasi required_if di atas)
             if ($request->hasFile('bukti')) {
                 $path = $request->file('bukti')->store('bukti', 'public');
                 $pembayaran->update(['bukti' => $path]);
@@ -121,7 +128,7 @@ class CheckoutController extends Controller
 
             // Simpan item pesanan
             $items = $cart->map(fn($c) => [
-                'product_id' => $c->tipe_alat_id, // 👉 Pastikan ini bernama product_id
+                'product_id' => $c->tipe_alat_id, 
                 'nama_alat' => $c->nama_alat,
                 'jumlah' => $c->jumlah,
                 'harga' => $c->harga,
@@ -130,7 +137,7 @@ class CheckoutController extends Controller
 
             $pesanan->items()->createMany($items->toArray());
 
-            // [FITUR BARU] Kurangi stok barang di database
+            // Kurangi stok barang di database
             foreach ($cart as $item) {
                 TipeAlat::where('id', $item->tipe_alat_id)->decrement('stok', $item->jumlah);
             }
@@ -156,7 +163,6 @@ class CheckoutController extends Controller
             DB::rollBack();
             Log::error($e->getMessage());
 
-            // 🔥 FIXED: Memunculkan pesan error asli ke layar agar ketahuan masalahnya
             return back()->with('error', 'Sistem Error: ' . $e->getMessage());
         }
     }
@@ -168,7 +174,6 @@ class CheckoutController extends Controller
     {
         $pesanan = \App\Models\Pesanan::with(['items', 'pembayaran'])->findOrFail($id);
 
-        // Deteksi SUPER AKURAT dari URL: 
         // Jika URL berawalan 'adminn', berikan file tampilan untuk Admin
         if (request()->is('adminn/*')) {
             return view('adminn.detailpesanan_admin', compact('pesanan'));
@@ -191,24 +196,16 @@ class CheckoutController extends Controller
         $pembayaran = $pesanan->pembayaran;
 
         if ($request->aksi === 'Setujui') {
-            // Jika disetujui, pesanan siap diambil, pembayaran lunas
             $pesanan->update(['status' => 'Menunggu Pengambilan']);
             if ($pembayaran) {
-                $pembayaran->update(['status' => 'Lunas']);
+                $pembayaran->update(['status' => 'lunas']);
             }
             $pesan = 'Pembayaran berhasil diverifikasi. Pesanan siap diambil!';
         } else {
-            // Jika ditolak, pesanan dibatalkan
             $pesanan->update(['status' => 'Dibatalkan']);
             if ($pembayaran) {
-                $pembayaran->update(['status' => 'Ditolak']);
+                $pembayaran->update(['status' => 'gagal']);
             }
-            // [OPSIONAL/TAMBAHAN] Jika ditolak, Anda mungkin ingin mengembalikan stok.
-            // Jika ingin mengembalikan stok saat ditolak, Anda bisa menambahkannya di sini.
-            // foreach ($pesanan->items as $item) {
-            //     TipeAlat::where('id', $item->product_id)->increment('stok', $item->jumlah);
-            // }
-
             $pesan = 'Pembayaran ditolak. Pesanan dibatalkan.';
         }
 

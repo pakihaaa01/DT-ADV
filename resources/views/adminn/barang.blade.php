@@ -203,6 +203,7 @@
                         <thead class="table-success">
                             <tr>
                                 <th>ID Pesanan</th>
+                                <th>Nama Pemesan</th>
                                 <th>Tgl Mulai Sewa</th>
                                 <th>Total Tagihan</th>
                                 <th>Status</th>
@@ -211,7 +212,7 @@
                         </thead>
                         <tbody id="tabel-pesanan">
                             <tr>
-                                <td colspan="5" class="text-center text-muted">Memuat data pesanan...</td>
+                                <td colspan="6" class="text-center text-muted">Memuat data pesanan...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -222,63 +223,70 @@
     </div>
 
     <script>
-        function loadDataPesanan() {
-            const tbody = document.getElementById('tabel-pesanan');
-            
-            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Mengambil data terbaru...</td></tr>';
-
-            fetch('/admin-data-pesanan-ajax', {
-                headers: {
-                    'Accept': 'application/json',
-                    // Optional: You can inject CSRF here if needed for POST later, but GET is fine without it.
-                    'X-Requested-With': 'XMLHttpRequest' 
-                }
-            })
-            .then(response => {
-                if (!response.ok) throw new Error("Gagal menarik data");
-                return response.json();
-            })
-            .then(data => {
-                tbody.innerHTML = ''; 
-
-                if(data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="5" class="text-center">Belum ada pesanan yang masuk.</td></tr>';
-                    return;
-                }
-
-                data.forEach(order => {
-                    let totalTagihan = order.pembayaran ? order.pembayaran.jumlah : 0;
-                    let totalRupiah = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalTagihan);
-
-                    let statusBadge = 'bg-warning text-dark'; 
-                    if(order.status === 'Selesai' || order.status === 'Lunas' || order.status === 'Disetujui') {
-                        statusBadge = 'bg-success';
-                    } else if(order.status === 'Dibatalkan' || order.status === 'Ditolak') {
-                        statusBadge = 'bg-danger';
-                    }
-
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td><strong>#${order.id}</strong></td>
-                        <td>${order.tanggal_mulai || '-'}</td>
-                        <td class="text-success fw-bold">${totalRupiah}</td>
-                        <td><span class="badge ${statusBadge}">${order.status || 'Pending'}</span></td>
-                        <td>
-                            <a href="/adminn/detailpesanan/${order.id}" class="btn btn-sm btn-info text-white">
-                                Lihat Detail
-                            </a>
-                        </td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            })
-            .catch(error => {
-                console.error("Gagal memuat pesanan:", error);
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-danger">Gagal terhubung ke database pesanan. Pastikan Route API sudah dibuat di web.php.</td></tr>';
-            });
-        }
-
-        document.addEventListener('DOMContentLoaded', loadDataPesanan);
+    function loadDataPesanan() {
+        const tbody = document.getElementById('tabel-pesanan');
         
-    </script>
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Mengambil data terbaru...</td></tr>';
+
+        fetch('/admin-data-pesanan-ajax', {
+            headers: {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest' 
+            }
+        })
+        .then(response => {
+            if (!response.ok) throw new Error("Gagal menarik data");
+            return response.json();
+        })
+        .then(data => {
+            tbody.innerHTML = ''; 
+
+            if(data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center">Belum ada pesanan yang masuk.</td></tr>';
+                return;
+            }
+
+            data.forEach(order => {
+                let totalTagihan = order.pembayaran ? order.pembayaran.jumlah : 0;
+                
+                // ✅ FORMAT RUPIAH TANPA ANGKA NOL DI BELAKANG KOMA
+                let totalRupiah = new Intl.NumberFormat('id-ID', { 
+                    style: 'currency', 
+                    currency: 'IDR',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                }).format(totalTagihan);
+
+                let statusBadge = 'bg-warning text-dark'; 
+                if(order.status === 'Selesai' || order.status === 'Lunas' || order.status === 'Disetujui' || order.status === 'Menunggu Pengambilan') {
+                    statusBadge = 'bg-success';
+                } else if(order.status === 'Dibatalkan' || order.status === 'Ditolak') {
+                    statusBadge = 'bg-danger';
+                }
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>#${order.id}</strong></td>
+                    <td>${order.nama || '-'}</td>
+                    <td>${order.tanggal_mulai || '-'}</td>
+                    <td class="text-success fw-bold">${totalRupiah}</td>
+                    <td><span class="badge ${statusBadge}">${order.status || 'Pending'}</span></td>
+                    <td>
+                        <a href="/adminn/detailpesanan/${order.id}" class="btn btn-sm btn-info text-white">
+                            Lihat Detail
+                        </a>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        })
+        .catch(error => {
+            console.error("Gagal memuat pesanan:", error);
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Gagal terhubung ke database pesanan. Pastikan Route API sudah dibuat di web.php.</td></tr>';
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', loadDataPesanan);
+    
+</script>
 @endsection
