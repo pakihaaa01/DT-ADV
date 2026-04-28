@@ -109,6 +109,7 @@
             display: flex;
             gap: 12px;
             justify-content: flex-start;
+            flex-wrap: wrap;
         }
 
         .btn {
@@ -133,7 +134,6 @@
             background: #cbd5e1;
         }
 
-        /* Tombol Oke Baru */
         .btn-oke {
             background: #004466;
             color: #fff;
@@ -149,8 +149,8 @@
                 padding: 0;
             }
 
-            .actions {
-                display: none;
+            .actions, .print-hide {
+                display: none !important;
             }
 
             .nota {
@@ -165,19 +165,17 @@
 <body>
     <div class="nota">
 
-        {{-- Notifikasi Sukses / Error untuk Admin --}}
         @if (session('success'))
-            <div style="background:#28a745; color:white; padding:10px 15px; border-radius:8px; margin-bottom:15px; font-weight:bold;">
+            <div class="print-hide" style="background:#28a745; color:white; padding:10px 15px; border-radius:8px; margin-bottom:15px; font-weight:bold;">
                 ✅ {{ session('success') }}
             </div>
         @endif
         @if (session('error'))
-            <div style="background:#dc3545; color:white; padding:10px 15px; border-radius:8px; margin-bottom:15px; font-weight:bold;">
+            <div class="print-hide" style="background:#dc3545; color:white; padding:10px 15px; border-radius:8px; margin-bottom:15px; font-weight:bold;">
                 ❌ {{ session('error') }}
             </div>
         @endif
 
-        {{-- HEADER: nama brand & metadata nota --}}
         <div class="top">
             <div class="brand">
                 <h1>Panel Admin DT Adventure</h1>
@@ -186,18 +184,24 @@
                 </div>
             </div>
 
-            {{-- Informasi nota: tanggal, status --}}
             <div class="meta">
                 <div><strong>Pesanan #{{ $pesanan->id }}</strong></div>
                 <div class="muted">Dibuat: {{ \Carbon\Carbon::parse($pesanan->created_at)->format('d M Y H:i') }}</div>
-                <div class="muted" style="color: #d97706; font-weight:bold; margin-top: 4px;">Status: {{ $pesanan->status ?? 'Menunggu Konfirmasi' }}</div>
+                
+                {{-- Pewarnaan Status Dinamis --}}
+                @php
+                    $color = '#d97706'; // Default kuning/orange
+                    if($pesanan->status === 'Sedang Disewa') $color = '#17a2b8'; // Biru info
+                    if($pesanan->status === 'Selesai') $color = '#28a745'; // Hijau
+                    if($pesanan->status === 'Dibatalkan') $color = '#dc3545'; // Merah
+                @endphp
+                <div style="color: {{ $color }}; font-weight:bold; margin-top: 4px; font-size: 1.05rem;">
+                    Status: {{ $pesanan->status ?? 'Menunggu Konfirmasi' }}
+                </div>
             </div>
         </div>
 
-        {{-- SECTION: data pemesan & metode pembayaran --}}
         <div class="section info-grid">
-
-            {{-- Data pemesan --}}
             <div class="card">
                 <strong>Data Penyewa</strong>
                 <div class="muted" style="margin-top:6px;">
@@ -209,12 +213,10 @@
                 </div>
             </div>
 
-            {{-- Metode pembayaran --}}
             <div class="card">
                 <strong>Metode Pembayaran</strong>
 
                 @php
-                    // Ambil data pembayaran dari relasi pesanan
                     $pembayaran = $pesanan->pembayaran; 
                     $metode = $pembayaran->metode_pembayaran ?? ($pesanan->metode_pembayaran ?? null);
                 @endphp
@@ -225,7 +227,6 @@
                     @elseif ($metode === 'QRIS')
                         📱 <strong>QRIS</strong>
 
-                        {{-- Jika ada bukti pembayaran, tampilkan --}}
                         @if ($pembayaran && !empty($pembayaran->bukti))
                             <div style="margin-top:10px;">
                                 <a href="{{ asset('storage/' . $pembayaran->bukti) }}" target="_blank" title="Klik untuk memperbesar">
@@ -236,10 +237,9 @@
                             <div class="muted" style="font-size: 0.8rem;">(Klik gambar untuk memperbesar)</div>
                             <div class="muted" style="margin-top: 5px;">Kode: {{ $pembayaran->kode_pembayaran }}</div>
 
-                            {{-- 🔥 FITUR VERIFIKASI ADMIN --}}
                             @if ($pesanan->status === 'Menunggu Verifikasi')
-                                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
-                                    <strong style="display:block; margin-bottom: 8px;">Aksi Admin:</strong>
+                                <div class="print-hide" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
+                                    <strong style="display:block; margin-bottom: 8px;">Verifikasi Pembayaran:</strong>
                                     <form action="{{ route('admin.pesanan.verifikasi', $pesanan->id) }}" method="POST" style="display: flex; gap: 10px;">
                                         @csrf
                                         <button type="submit" name="aksi" value="Setujui" class="btn btn-success" style="background-color: #28a745; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%;">
@@ -263,10 +263,8 @@
                     @endif
                 </div>
             </div>
-
         </div>
 
-        {{-- SECTION: tabel barang --}}
         <div class="section">
             <strong>Rincian Barang yang Disewa</strong>
 
@@ -283,7 +281,6 @@
 
                 <tbody>
                     @php
-                        // Ambil daftar item dari database (lewat relasi)
                         $lines = $pesanan->items;
 
                         $subtotalPerDay = $lines->sum(function ($item) {
@@ -318,7 +315,6 @@
             </table>
         </div>
 
-        {{-- SECTION: total pembayaran --}}
         <div class="totals">
             <div class="box">
                 <div class="line">
@@ -338,12 +334,24 @@
             </div>
         </div>
 
-        {{-- Tombol aksi (Khusus Admin) --}}
+        {{-- ACTIONS AREA --}}
         <div class="actions">
-            {{-- Tombol Oke untuk kembali ke Dashboard Admin --}}
-            <a href="{{ route('adminn.barang.index') }}" class="btn btn-oke">✅ Oke</a>
-            
+            <a href="{{ route('adminn.barang.index') }}" class="btn btn-oke">← Kembali</a>
             <button type="button" class="btn btn-print" onclick="window.print()">🖨️ Print Data</button>
+
+            {{-- Form Update Status Lanjutan (Diambil & Selesai) --}}
+            <form action="{{ route('admin.pesanan.verifikasi', $pesanan->id) }}" method="POST" style="display: inline-block;">
+                @csrf
+                @if ($pesanan->status === 'Menunggu Pengambilan')
+                    <button type="submit" name="aksi" value="Diambil" class="btn" style="background: #17a2b8; color: white;">
+                        🎒 Tandai Barang Diambil
+                    </button>
+                @elseif ($pesanan->status === 'Sedang Disewa')
+                    <button type="submit" name="aksi" value="Selesai" class="btn" style="background: #28a745; color: white;" onclick="return confirm('Pesanan akan diselesaikan dan STOK BARANG akan dikembalikan ke database. Lanjutkan?')">
+                        📦 Tandai Barang Dikembalikan (Selesai)
+                    </button>
+                @endif
+            </form>
         </div>
         
     </div>

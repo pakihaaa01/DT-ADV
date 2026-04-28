@@ -186,10 +186,14 @@ class CheckoutController extends Controller
     // =========================
     // 5. VERIFIKASI PEMBAYARAN
     // =========================
+    // =========================
+    // 5. UPDATE STATUS & VERIFIKASI
+    // =========================
     public function verifikasi(Request $request, $id)
     {
+        // Tambahkan Diambil dan Selesai ke dalam validasi
         $request->validate([
-            'aksi' => 'required|in:Setujui,Tolak'
+            'aksi' => 'required|in:Setujui,Tolak,Diambil,Selesai'
         ]);
 
         $pesanan = Pesanan::findOrFail($id);
@@ -201,12 +205,29 @@ class CheckoutController extends Controller
                 $pembayaran->update(['status' => 'lunas']);
             }
             $pesan = 'Pembayaran berhasil diverifikasi. Pesanan siap diambil!';
-        } else {
+            
+        } elseif ($request->aksi === 'Tolak') {
             $pesanan->update(['status' => 'Dibatalkan']);
             if ($pembayaran) {
                 $pembayaran->update(['status' => 'gagal']);
             }
             $pesan = 'Pembayaran ditolak. Pesanan dibatalkan.';
+            
+        } elseif ($request->aksi === 'Diambil') {
+            // Status saat pelanggan membawa pergi barang
+            $pesanan->update(['status' => 'Sedang Disewa']);
+            $pesan = 'Status diperbarui: Barang sekarang sedang disewa oleh pelanggan.';
+            
+        } elseif ($request->aksi === 'Selesai') {
+            // Status saat pelanggan mengembalikan barang
+            $pesanan->update(['status' => 'Selesai']);
+            
+            // [BONUS] Kembalikan stok ke tabel tipe_alat karena barang sudah diretur
+            foreach ($pesanan->items as $item) {
+                \App\Models\TipeAlat::where('id', $item->product_id)->increment('stok', $item->jumlah);
+            }
+            
+            $pesan = 'Pesanan Selesai! Barang telah dikembalikan dan stok otomatis diperbarui.';
         }
 
         return back()->with('success', $pesan);
