@@ -6,17 +6,29 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up()
-{
-    Schema::table('keranjang', function (Blueprint $table) {
-        $table->decimal('harga', 10, 2)->after('gambar');
-    });
-}
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        // Mengecek apakah kolom 'harga' belum ada di tabel 'keranjang' sebelum menambahkannya
+        if (!Schema::hasColumn('keranjang', 'harga')) {
+            Schema::table('keranjang', function (Blueprint $table) {
+                $table->decimal('harga', 10, 2)->notNull()->after('gambar');
+            });
+        }
+    }
 
-public function down()
-{
-    Schema::table('keranjang', function (Blueprint $table) {
-        $table->dropColumn('harga');
-    });
-}
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        // Mengecek apakah kolom 'harga' ada sebelum menghapusnya saat rollback
+        if (Schema::hasColumn('keranjang', 'harga')) {
+            Schema::table('keranjang', function (Blueprint $table) {
+                $table->dropColumn('harga');
+            });
+        }
+    }
 };
