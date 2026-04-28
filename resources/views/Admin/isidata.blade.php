@@ -97,7 +97,7 @@
 <body>
 
     {{-- Tombol kembali ke keranjang (fallback ke route jika session previous_url tidak ada) --}}
-    <a href="{{ route('admin.keranjang') }}" class="back-btn">← Kembali ke Keranjang</a>
+    <a href="{{ route('admin.keranjang') }}" class="back-btn">
         <span class="arrow">←</span> Kembali Ke Keranjang
     </a>
 

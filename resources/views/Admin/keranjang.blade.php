@@ -50,7 +50,7 @@
 <body>
     <div class="cart-page">
         <div class="cart-header">
-            <a href="{{ route('User.dashboard') }}" class="back-btn">← Kembali Belanja</a>
+            <a href="{{ route('User.dashboard') }}" class="back-btn">
                 <span class="arrow">←</span> Kembali
             </a>
             <h2>Keranjang </h2>
