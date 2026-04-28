@@ -50,7 +50,7 @@
 <body>
     <div class="cart-page">
         <div class="cart-header">
-            <a href="#" class="back-btn" onclick="history.back(); return false;">
+            <a href="{{ route('User.dashboard') }}" class="back-btn">← Kembali Belanja</a>
                 <span class="arrow">←</span> Kembali
             </a>
             <h2>Keranjang </h2>
