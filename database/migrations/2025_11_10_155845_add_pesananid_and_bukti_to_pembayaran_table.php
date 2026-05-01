@@ -6,22 +6,25 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up()
+    public function up(): void
     {
         Schema::table('pembayaran', function (Blueprint $table) {
-            $table->unsignedBigInteger('pesanan_id')->nullable()->after('user_id');
-            $table->string('bukti')->nullable()->after('tanggal_pembayaran');
-
-            // optional foreign key:
-            // $table->foreign('pesanan_id')->references('id')->on('pesanan')->onDelete('set null');
+            // 🔥 HAPUS ATAU COMMENT BARIS INI:
+            // $table->foreignId('pesanan_id')->...
+            
+            // BIARKAN BARIS INI (jika ada kolom bukti transfer):
+            $table->string('bukti')->nullable(); 
         });
     }
 
-    public function down()
+    public function down(): void
     {
         Schema::table('pembayaran', function (Blueprint $table) {
-            // if foreign key used: $table->dropForeign(['pesanan_id']);
-            $table->dropColumn(['pesanan_id', 'bukti']);
+            // 🔥 HAPUS ATAU COMMENT JUGA DI SINI:
+            // $table->dropForeign(['pesanan_id']);
+            // $table->dropColumn('pesanan_id');
+            
+            $table->dropColumn('bukti');
         });
     }
 };

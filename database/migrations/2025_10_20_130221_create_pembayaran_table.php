@@ -10,7 +10,13 @@ return new class extends Migration
     {
         Schema::create('pembayaran', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            
+            // 🔥 1. Tambahkan ->nullable() di sini agar Guest Checkout berhasil!
+            $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('cascade');
+            
+            // 🔥 2. Tambahkan pesanan_id untuk menyambungkan pembayaran dengan pesanan
+            $table->foreignId('pesanan_id')->constrained('pesanan')->onDelete('cascade');
+            
             $table->string('kode_pembayaran')->unique();
             $table->decimal('jumlah', 15, 2);
             $table->string('metode_pembayaran');

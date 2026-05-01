@@ -10,11 +10,13 @@ class CreatePesananTable extends Migration
     {
         Schema::create('pesanan', function (Blueprint $table) {
             $table->id();
+            // 🔥 Tambahkan user_id nullable agar bisa melacak pesanan user login / guest
+            $table->foreignId('user_id')->nullable()->constrained('users')->onDelete('cascade');
+            
             $table->string('nama');
             $table->string('whatsapp');
             $table->string('email')->nullable();
             $table->integer('hari')->unsigned();
-            // tambahkan kolom lain kalau perlu, contoh: $table->integer('total')->nullable();
             $table->timestamps();
         });
     }
