@@ -48,12 +48,19 @@ class PesananController extends Controller
             ]);
 
             foreach ($request->items as $item) {
-                DB::table('detail_pesanan')->insert([
-                    'pesanan_id'   => $pesananId,
-                    'tipe_alat_id' => $item['tipe_alat_id'],
-                    'qty'          => $item['qty'],
-                    'created_at'   => now(),
-                    'updated_at'   => now(),
+                $product = DB::table('tipe_alat')->where('id', $item['tipe_alat_id'])->first();
+                $harga = $product->harga ?? 0;
+                $namaAlat = $product->nama_alat ?? ($product->nama ?? 'Alat');
+
+                DB::table('pesanan_items')->insert([
+                    'pesanan_id' => $pesananId,
+                    'product_id' => $item['tipe_alat_id'],
+                    'nama_alat'  => $namaAlat,
+                    'jumlah'     => $item['qty'],
+                    'harga'      => $harga,
+                    'subtotal'   => $harga * $item['qty'],
+                    'created_at' => now(),
+                    'updated_at' => now(),
                 ]);
             }
 
