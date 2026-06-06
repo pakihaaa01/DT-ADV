@@ -12,6 +12,7 @@ class PesananController extends Controller
 {
     public function store(Request $request)
     {
+        // 1. Tambahkan validasi untuk file bukti_pembayaran
         $request->validate([
             'user_id' => 'required',
             'nama' => 'required',
@@ -24,6 +25,7 @@ class PesananController extends Controller
             'items' => 'required|array',
             'items.*.tipe_alat_id' => 'required',
             'items.*.qty' => 'required|integer',
+            'bukti_pembayaran' => 'nullable|image|mimes:jpeg,png,jpg|max:5120' 
         ]);
 
         DB::beginTransaction();
@@ -36,6 +38,25 @@ class PesananController extends Controller
                 $durasiHari = 1;
             }
 
+            // 2. Logika Status Dinamis
+            $status = 'Menunggu Konfirmasi';
+            if ($request->metode_pembayaran == 'Cash') {
+                $status = 'Menunggu Pengambilan';
+            } elseif ($request->metode_pembayaran == 'QRIS') {
+                $status = 'Menunggu Verifikasi';
+            }
+
+            // 3. Proses Upload Bukti Pembayaran ke Folder Server
+            $buktiBayarPath = null;
+            if ($request->hasFile('bukti_pembayaran')) {
+                $file = $request->file('bukti_pembayaran');
+                $namaFile = time() . '_' . $file->getClientOriginalName();
+                // Simpan ke folder public/storage/bukti_pembayaran
+                $file->move(public_path('storage/bukti_pembayaran'), $namaFile);
+                $buktiBayarPath = 'storage/bukti_pembayaran/' . $namaFile;
+            }
+
+            // 4. Simpan ke Database
             $pesananId = DB::table('pesanan')->insertGetId([
                 'user_id'           => $request->user_id,
                 'nama'              => $request->nama,
@@ -47,7 +68,8 @@ class PesananController extends Controller
                 'session_id'        => null,
                 'metode_pembayaran' => $request->metode_pembayaran,
                 'total_harga'       => $request->total_harga,
-                'status'            => $request->metode_pembayaran == 'Cash' ? 'Menunggu Pengambilan' : 'Menunggu Konfirmasi',
+                'status'            => $status, // Gunakan status dinamis
+                'bukti_pembayaran'  => $buktiBayarPath, // Simpan path gambar
                 'created_at'        => now(),
                 'updated_at'        => now(),
             ]);

@@ -217,8 +217,10 @@
                 <strong>Metode Pembayaran</strong>
 
                 @php
-                    $pembayaran = $pesanan->pembayaran; 
-                    $metode = $pembayaran->metode_pembayaran ?? ($pesanan->metode_pembayaran ?? null);
+                    $pembayaran = $pesanan->pembayaran ?? null; 
+                    $metode = $pesanan->metode_pembayaran ?? ($pembayaran->metode_pembayaran ?? null);
+                    // Menangkap bukti bayar dari kolom tabel pesanan terbaru
+                    $buktiPath = $pesanan->bukti_pembayaran ?? ($pembayaran->bukti ?? null);
                 @endphp
 
                 <div class="muted" style="margin-top:6px;">
@@ -227,15 +229,18 @@
                     @elseif ($metode === 'QRIS')
                         📱 <strong>QRIS</strong>
 
-                        @if ($pembayaran && !empty($pembayaran->bukti))
+                        @if (!empty($buktiPath))
                             <div style="margin-top:10px;">
-                                <a href="{{ asset('storage/' . $pembayaran->bukti) }}" target="_blank" title="Klik untuk memperbesar">
-                                    <img src="{{ asset('storage/' . $pembayaran->bukti) }}" alt="Bukti Pembayaran"
+                                <a href="{{ asset($buktiPath) }}" target="_blank" title="Klik untuk memperbesar">
+                                    <img src="{{ asset($buktiPath) }}" alt="Bukti Pembayaran"
                                         width="150" style="border-radius:8px; border: 1px solid #ccc; cursor: pointer;">
                                 </a>
                             </div>
                             <div class="muted" style="font-size: 0.8rem;">(Klik gambar untuk memperbesar)</div>
-                            <div class="muted" style="margin-top: 5px;">Kode: {{ $pembayaran->kode_pembayaran }}</div>
+                            
+                            @if(isset($pembayaran->kode_pembayaran))
+                                <div class="muted" style="margin-top: 5px;">Kode: {{ $pembayaran->kode_pembayaran }}</div>
+                            @endif
 
                             @if ($pesanan->status === 'Menunggu Verifikasi')
                                 <div class="print-hide" style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd;">
