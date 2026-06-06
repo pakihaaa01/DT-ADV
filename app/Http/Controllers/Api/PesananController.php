@@ -14,6 +14,10 @@ class PesananController extends Controller
     {
         $request->validate([
             'user_id' => 'required',
+            'nama' => 'required',
+            'whatsapp' => 'required',
+            'email' => 'required',
+            'metode_pembayaran' => 'required',
             'tgl_mulai' => 'required|date',
             'tgl_selesai' => 'required|date',
             'total_harga' => 'required|numeric',
@@ -34,15 +38,16 @@ class PesananController extends Controller
 
             $pesananId = DB::table('pesanan')->insertGetId([
                 'user_id'           => $request->user_id,
-                'nama'              => 'User Mobile',
-                'whatsapp'          => '-',
-                'email'             => '-',
+                'nama'              => $request->nama,
+                'whatsapp'          => $request->whatsapp,
+                'email'             => $request->email,
                 'hari'              => $durasiHari,
                 'tanggal_mulai'     => $request->tgl_mulai,
                 'tanggal_kembali'   => $request->tgl_selesai,
                 'session_id'        => null,
-                'metode_pembayaran' => 'Cash',
-                'status'            => 'pending',
+                'metode_pembayaran' => $request->metode_pembayaran,
+                'total_harga'       => $request->total_harga,
+                'status'            => $request->metode_pembayaran == 'Cash' ? 'Menunggu Pengambilan' : 'Menunggu Konfirmasi',
                 'created_at'        => now(),
                 'updated_at'        => now(),
             ]);

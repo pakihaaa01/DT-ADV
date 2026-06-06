@@ -247,7 +247,10 @@
             }
 
             data.forEach(order => {
-                let totalTagihan = order.pembayaran ? order.pembayaran.jumlah : 0;
+                // ==============================================================
+                // ✅ FIX TOTAL HARGA: Ambil nilai dari kolom 'total_harga' terlebih dahulu
+                // ==============================================================
+                let totalTagihan = order.total_harga ? order.total_harga : (order.pembayaran ? order.pembayaran.jumlah : 0);
                 
                 // ✅ FORMAT RUPIAH TANPA ANGKA NOL DI BELAKANG KOMA
                 let totalRupiah = new Intl.NumberFormat('id-ID', { 
